@@ -54,7 +54,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
   );
 
   @override
-  AppPalette copyWith({Color? ink, Color? teal, Color? tealDark, Color? mint, Color? gold, Color? paper, Color? card, Color? line, Color? muted, bool? outlined}) {
+  AppPalette copyWith(
+      {Color? ink,
+      Color? teal,
+      Color? tealDark,
+      Color? mint,
+      Color? gold,
+      Color? paper,
+      Color? card,
+      Color? line,
+      Color? muted,
+      bool? outlined}) {
     return AppPalette(
       ink: ink ?? this.ink,
       teal: teal ?? this.teal,
@@ -82,20 +92,42 @@ extension AppPaletteContext on BuildContext {
 const kRadius = 24.0;
 const kRadiusSm = 16.0;
 
-EdgeInsets pagePadding(BuildContext context, {double top = 12, double bottom = 32}) =>
+EdgeInsets pagePadding(BuildContext context,
+        {double top = 12, double bottom = 32}) =>
     EdgeInsets.fromLTRB(context.pageInset, top, context.pageInset, bottom);
 
-TextStyle display(double size, {FontWeight weight = FontWeight.w700, Color? color, double spacing = -0.5}) =>
-    TextStyle(fontFamily: 'SpaceGrotesk', fontSize: size, fontWeight: weight, color: color, letterSpacing: spacing, height: 1.18);
+TextStyle display(double size,
+        {FontWeight weight = FontWeight.w700,
+        Color? color,
+        double spacing = -0.5}) =>
+    TextStyle(
+        fontFamily: 'SpaceGrotesk',
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: spacing,
+        height: 1.18);
 
 ThemeData buildTheme(AppThemeStyle style) {
-  final colors = style == AppThemeStyle.pocket ? AppPalette.pocket : AppPalette.ledger;
+  final colors =
+      style == AppThemeStyle.pocket ? AppPalette.pocket : AppPalette.ledger;
   final outline = colors.outlined ? colors.line : const Color(0xFFDCE5E0);
-  final scheme = ColorScheme.fromSeed(seedColor: colors.teal, primary: colors.teal, secondary: colors.mint, surface: colors.card, brightness: Brightness.light);
+  final scheme = ColorScheme.fromSeed(
+      seedColor: colors.teal,
+      primary: colors.teal,
+      secondary: colors.mint,
+      surface: colors.card,
+      brightness: Brightness.light);
   return ThemeData(
     colorScheme: scheme,
     extensions: [colors],
     useMaterial3: true,
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeSlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: FadeSlidePageTransitionsBuilder(),
+      },
+    ),
     fontFamily: 'Manrope',
     scaffoldBackgroundColor: colors.paper,
     appBarTheme: AppBarTheme(
@@ -103,18 +135,34 @@ ThemeData buildTheme(AppThemeStyle style) {
       foregroundColor: colors.ink,
       elevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 22, fontWeight: FontWeight.w700, color: colors.ink, letterSpacing: -0.5),
+      titleTextStyle: TextStyle(
+          fontFamily: 'SpaceGrotesk',
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: colors.ink,
+          letterSpacing: -0.5),
     ),
-    textTheme: TextTheme(titleMedium: TextStyle(fontWeight: FontWeight.w700, color: colors.ink), bodyMedium: TextStyle(color: colors.ink)),
+    textTheme: TextTheme(
+        titleMedium: TextStyle(fontWeight: FontWeight.w700, color: colors.ink),
+        bodyMedium: TextStyle(color: colors.ink)),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colors.card,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: colors.ink, width: 2)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(kRadiusSm),
+          borderSide:
+              BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(kRadiusSm),
+          borderSide:
+              BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(kRadiusSm),
+          borderSide: BorderSide(color: colors.ink, width: 2)),
       labelStyle: TextStyle(color: colors.muted),
-      floatingLabelStyle: TextStyle(color: colors.ink, fontWeight: FontWeight.w700),
+      floatingLabelStyle:
+          TextStyle(color: colors.ink, fontWeight: FontWeight.w700),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
@@ -122,16 +170,50 @@ ThemeData buildTheme(AppThemeStyle style) {
         foregroundColor: colors.outlined ? Colors.white : Colors.white,
         minimumSize: const Size(64, 56),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
-        textStyle: const TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kRadiusSm)),
+        textStyle: const TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(64, 56),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kRadiusSm)),
       ),
     ),
   );
+}
+
+// fade + gentle rise used for every pushed route, on all platforms.
+class FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const FadeSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, 0.04), end: Offset.zero)
+            .animate(curved),
+        child: child,
+      ),
+    );
+  }
 }

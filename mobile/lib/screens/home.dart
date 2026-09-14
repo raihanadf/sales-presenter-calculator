@@ -11,6 +11,7 @@ import 'history.dart';
 import 'settings_hub.dart';
 import 'import_export.dart';
 import '../util/format.dart';
+import '../anim.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -90,46 +91,66 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: _selectedIndex == 1
-            ? const SettingsHubBody()
-            : Column(
-                children: [
-                  const _SyncBanner(),
-                  Expanded(
-                    child: RefreshIndicator(
-                      color: context.colors.teal,
-                      onRefresh: _refresh,
-                      child: FutureBuilder<Object>(
-                        future: _future,
-                        builder: (context, snap) {
-                          if (snap.connectionState == ConnectionState.waiting) {
-                            return Center(
-                              child: CircularProgressIndicator(
-                                color: context.colors.teal,
-                              ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.02), end: Offset.zero)
+                  .animate(animation),
+              child: child,
+            ),
+          ),
+          child: _selectedIndex == 1
+              ? const SettingsHubBody(key: ValueKey('settings'))
+              : Column(
+                  key: const ValueKey('home'),
+                  children: [
+                    const AnimatedSize(
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.topCenter,
+                      child: _SyncBanner(),
+                    ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: context.colors.teal,
+                        onRefresh: _refresh,
+                        child: FutureBuilder<Object>(
+                          future: _future,
+                          builder: (context, snap) {
+                            if (snap.connectionState ==
+                                ConnectionState.waiting) {
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  color: context.colors.teal,
+                                ),
+                              );
+                            }
+                            if (snap.hasError) {
+                              return _ErrorView(
+                                message: '${snap.error}',
+                                onRetry: _refresh,
+                              );
+                            }
+                            final data = snap.data!;
+                            if (data is MyDashboard) {
+                              return _MyBody(data: data, name: name);
+                            }
+                            return _AdminBody(
+                              data: data as Dashboard,
+                              name: name,
+                              onChanged: _refresh,
                             );
-                          }
-                          if (snap.hasError) {
-                            return _ErrorView(
-                              message: '${snap.error}',
-                              onRetry: _refresh,
-                            );
-                          }
-                          final data = snap.data!;
-                          if (data is MyDashboard) {
-                            return _MyBody(data: data, name: name);
-                          }
-                          return _AdminBody(
-                            data: data as Dashboard,
-                            name: name,
-                            onChanged: _refresh,
-                          );
-                        },
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -203,40 +224,49 @@ class _MyBody extends StatelessWidget {
     return ListView(
       padding: pagePadding(context, top: 10, bottom: 124),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 14),
-          child: Text('Halo, $name',
-              style: TextStyle(color: context.colors.muted, fontSize: 15)),
+        Reveal(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 14),
+            child: Text('Halo, $name',
+                style: TextStyle(color: context.colors.muted, fontSize: 15)),
+          ),
         ),
-        HeroPanel(
-          label: 'Pendapatan hari ini',
-          amount: data.todayIncome,
-          subLabel: 'Bulan ini',
-          subAmount: data.monthIncome,
-          trailing: data.rank != null
-              ? RankPill(rank: data.rank!, total: data.totalPresenters)
-              : null,
+        Reveal(
+          delayMs: 70,
+          child: HeroPanel(
+            label: 'Pendapatan hari ini',
+            amount: data.todayIncome,
+            subLabel: 'Bulan ini',
+            subAmount: data.monthIncome,
+            trailing: data.rank != null
+                ? RankPill(rank: data.rank!, total: data.totalPresenters)
+                : null,
+          ),
         ),
         const SizedBox(height: 18),
-        LayoutBuilder(builder: (context, constraints) {
-          final width = context.usesLargeText
-              ? constraints.maxWidth
-              : (constraints.maxWidth - 12) / 2;
-          return Wrap(spacing: 12, runSpacing: 12, children: [
-            SizedBox(
-                width: width,
-                child: StatTile(
-                    icon: Icons.check_circle_outline_rounded,
-                    label: 'Closing bulan ini',
-                    value: Text('${data.monthClosings}', style: display(22)))),
-            SizedBox(
-                width: width,
-                child: StatTile(
-                    icon: Icons.trending_up_rounded,
-                    label: 'Rata-rata / closing',
-                    value: Rupiah(data.avgPerClosing, size: 18))),
-          ]);
-        }),
+        Reveal(
+          delayMs: 140,
+          child: LayoutBuilder(builder: (context, constraints) {
+            final width = context.usesLargeText
+                ? constraints.maxWidth
+                : (constraints.maxWidth - 12) / 2;
+            return Wrap(spacing: 12, runSpacing: 12, children: [
+              SizedBox(
+                  width: width,
+                  child: StatTile(
+                      icon: Icons.check_circle_outline_rounded,
+                      label: 'Closing bulan ini',
+                      value:
+                          Text('${data.monthClosings}', style: display(22)))),
+              SizedBox(
+                  width: width,
+                  child: StatTile(
+                      icon: Icons.trending_up_rounded,
+                      label: 'Rata-rata / closing',
+                      value: Rupiah(data.avgPerClosing, size: 18))),
+            ]);
+          }),
+        ),
         const SizedBox(height: 26),
         const SectionTitle('Closing terbaik'),
         if (data.bestTakeHome == 0)
@@ -367,43 +397,52 @@ class _AdminBody extends StatelessWidget {
     return ListView(
       padding: pagePadding(context, top: 10, bottom: 124),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 14),
-          child: Text('Halo, $name',
-              style: TextStyle(color: context.colors.muted, fontSize: 15)),
+        Reveal(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 14),
+            child: Text('Halo, $name',
+                style: TextStyle(color: context.colors.muted, fontSize: 15)),
+          ),
         ),
-        HeroPanel(
-            label: 'Pendapatan hari ini',
-            amount: data.todayIncome,
-            subLabel: 'Bulan ini',
-            subAmount: data.monthIncome),
+        Reveal(
+          delayMs: 70,
+          child: HeroPanel(
+              label: 'Pendapatan hari ini',
+              amount: data.todayIncome,
+              subLabel: 'Bulan ini',
+              subAmount: data.monthIncome),
+        ),
         const SizedBox(height: 16),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                final ok = await showImportSheet(context);
-                if (ok == true) {
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Closing berhasil diimport.')),
-                  );
-                  await onChanged();
-                }
-              },
-              icon: const Icon(Icons.file_upload_outlined),
-              label: const Text('Import'),
+        Reveal(
+          delayMs: 140,
+          child: Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final ok = await showImportSheet(context);
+                  if (ok == true) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                          content: Text('Closing berhasil diimport.')),
+                    );
+                    await onChanged();
+                  }
+                },
+                icon: const Icon(Icons.file_upload_outlined),
+                label: const Text('Import'),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => showExportSheet(context),
-              icon: const Icon(Icons.file_download_outlined),
-              label: const Text('Export'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => showExportSheet(context),
+                icon: const Icon(Icons.file_download_outlined),
+                label: const Text('Export'),
+              ),
             ),
-          ),
-        ]),
+          ]),
+        ),
         const SizedBox(height: 26),
         const SectionTitle('Menunggu persetujuan'),
         if (data.pending.isEmpty)

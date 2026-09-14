@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../anim.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: pagePadding(context, top: 26, bottom: 28),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
+            Reveal(
+                child: Row(children: [
               Container(
                 width: 58,
                 height: 58,
@@ -90,36 +92,46 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-            ]),
+            ])),
             const SizedBox(height: 44),
-            Text('Selamat\ndatang!',
-                style: display(40, weight: FontWeight.w700, spacing: -1)),
+            Reveal(
+                delayMs: 90,
+                child: Text('Selamat\ndatang!',
+                    style: display(40, weight: FontWeight.w700, spacing: -1))),
             const SizedBox(height: 10),
-            Text('Masuk untuk catat hasil hari ini.',
-                style: TextStyle(color: colors.muted, fontSize: 15)),
+            Reveal(
+                delayMs: 150,
+                child: Text('Masuk untuk catat hasil hari ini.',
+                    style: TextStyle(color: colors.muted, fontSize: 15))),
             const SizedBox(height: 24),
-            TextField(
-              controller: _username,
-              decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.person_outline_rounded)),
-              textInputAction: TextInputAction.next,
+            Reveal(
+              delayMs: 210,
+              child: TextField(
+                controller: _username,
+                decoration: const InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: Icon(Icons.person_outline_rounded)),
+                textInputAction: TextInputAction.next,
+              ),
             ),
             const SizedBox(height: 14),
-            TextField(
-              controller: _password,
-              obscureText: _obscure,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscure = !_obscure),
+            Reveal(
+              delayMs: 270,
+              child: TextField(
+                controller: _password,
+                obscureText: _obscure,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
                 ),
+                onSubmitted: (_) => _submit(),
               ),
-              onSubmitted: (_) => _submit(),
             ),
             if (_error != null) ...[
               const SizedBox(height: 14),
@@ -133,15 +145,18 @@ class _LoginScreenState extends State<LoginScreen> {
               ]),
             ],
             const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _loading ? null : _submit,
-              child: _loading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Text('Masuk'),
+            Reveal(
+              delayMs: 340,
+              child: FilledButton(
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Masuk'),
+              ),
             ),
           ]),
         ),

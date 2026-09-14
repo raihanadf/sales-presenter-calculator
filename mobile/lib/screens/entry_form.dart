@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../util/calc.dart';
 import '../util/format.dart';
+import '../anim.dart';
 
 class EntryFormScreen extends StatefulWidget {
   const EntryFormScreen({super.key});
@@ -106,7 +107,8 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
   Widget build(BuildContext context) {
     if (_settings == null) {
       return Scaffold(
-        body: Center(child: CircularProgressIndicator(color: context.colors.teal)),
+        body: Center(
+            child: CircularProgressIndicator(color: context.colors.teal)),
       );
     }
     return Scaffold(
@@ -261,7 +263,7 @@ class _ReceiptCard extends StatelessWidget {
                       color: foreground,
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
-              trailing: Rupiah(p.takeHome,
+              trailing: CountUpRupiah(p.takeHome,
                   size: 30, color: colors.outlined ? colors.ink : colors.mint),
             ),
           ],

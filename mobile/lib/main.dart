@@ -35,9 +35,30 @@ class _Gate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    if (state.booting) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return state.isLoggedIn ? const HomeScreen() : const LoginScreen();
+    final Widget screen = state.booting
+        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+        : state.isLoggedIn
+            ? const HomeScreen()
+            : const LoginScreen();
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 420),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.98, end: 1.0).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(
+        key: ValueKey(state.booting
+            ? 'booting'
+            : state.isLoggedIn
+                ? 'home'
+                : 'login'),
+        child: screen,
+      ),
+    );
   }
 }
