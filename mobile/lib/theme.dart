@@ -75,13 +75,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
 extension AppPaletteContext on BuildContext {
   AppPalette get colors => Theme.of(this).extension<AppPalette>()!;
+  bool get usesLargeText => MediaQuery.textScalerOf(this).scale(16) >= 20;
+  double get pageInset => MediaQuery.sizeOf(this).width < 380 ? 16 : 20;
 }
 
 const kRadius = 24.0;
 const kRadiusSm = 16.0;
 
+EdgeInsets pagePadding(BuildContext context, {double top = 12, double bottom = 32}) =>
+    EdgeInsets.fromLTRB(context.pageInset, top, context.pageInset, bottom);
+
 TextStyle display(double size, {FontWeight weight = FontWeight.w700, Color? color, double spacing = -0.5}) =>
-    TextStyle(fontFamily: 'SpaceGrotesk', fontSize: size, fontWeight: weight, color: color, letterSpacing: spacing, height: 1.05);
+    TextStyle(fontFamily: 'SpaceGrotesk', fontSize: size, fontWeight: weight, color: color, letterSpacing: spacing, height: 1.18);
 
 ThemeData buildTheme(AppThemeStyle style) {
   final colors = style == AppThemeStyle.pocket ? AppPalette.pocket : AppPalette.ledger;
@@ -104,7 +109,7 @@ ThemeData buildTheme(AppThemeStyle style) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colors.card,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: outline, width: colors.outlined ? 1.5 : 1)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusSm), borderSide: BorderSide(color: colors.ink, width: 2)),
@@ -115,9 +120,17 @@ ThemeData buildTheme(AppThemeStyle style) {
       style: FilledButton.styleFrom(
         backgroundColor: colors.outlined ? colors.ink : colors.teal,
         foregroundColor: colors.outlined ? Colors.white : Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 17),
+        minimumSize: const Size(64, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
         textStyle: const TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(64, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
       ),
     ),
   );

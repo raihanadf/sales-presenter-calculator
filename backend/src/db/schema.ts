@@ -21,22 +21,31 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at").notNull(),
 });
 
-// one row = one presenter's daily closing recap. computed columns are
-// snapshotted at write time so later settings changes never rewrite history.
+// one row = one presenter's daily closing recap. inputs, settings, and
+// computed values are snapshotted so later settings changes never rewrite it.
 export const salesEntries = sqliteTable("sales_entries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   presenterId: integer("presenter_id")
     .notNull()
     .references(() => users.id),
   entryDate: text("entry_date").notNull(), // iso yyyy-mm-dd
+  status: text("status", { enum: ["pending", "approved"] })
+    .notNull()
+    .default("approved"),
   closingCount: integer("closing_count").notNull(),
   bopInput: integer("bop_input").notNull(),
   audienceCount: integer("audience_count").notNull(),
   harian: integer("harian").notNull(),
+  closingPriceUsed: integer("closing_price_used"),
+  bopPercentUsed: integer("bop_percent_used"),
+  souvenirUnitPriceUsed: integer("souvenir_unit_price_used"),
+  souvenirPercentUsed: integer("souvenir_percent_used"),
   closingTotal: integer("closing_total").notNull(),
   bopValue: integer("bop_value").notNull(),
   souvenirValue: integer("souvenir_value").notNull(),
   takeHome: integer("take_home").notNull(),
+  approvedAt: integer("approved_at"),
+  approvedBy: integer("approved_by").references(() => users.id),
   createdAt: integer("created_at").notNull(),
 });
 

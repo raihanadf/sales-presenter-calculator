@@ -121,15 +121,29 @@ class ApiClient {
     return SalesEntry.fromJson((await _decode(r))['entry']);
   }
 
-  Future<List<SalesEntry>> entries({int? presenterId, String? from, String? to}) async {
-    final q = <String, String>{};
+  Future<EntryPage> entries({
+    int? presenterId,
+    String? from,
+    String? to,
+    int page = 1,
+  }) async {
+    final q = <String, String>{'page': '$page'};
     if (presenterId != null) q['presenterId'] = '$presenterId';
     if (from != null) q['from'] = from;
     if (to != null) q['to'] = to;
-    final uri = Uri.parse('$baseUrl/api/entries').replace(queryParameters: q.isEmpty ? null : q);
+    final uri = Uri.parse('$baseUrl/api/entries').replace(queryParameters: q);
     final r = await http.get(uri, headers: _headers);
-    final body = await _decode(r);
-    return (body['entries'] as List).map((e) => SalesEntry.fromJson(e)).toList();
+    return EntryPage.fromJson(await _decode(r));
+  }
+
+  Future<SalesEntry> entry(int id) async {
+    final r = await http.get(Uri.parse('$baseUrl/api/entries/$id'), headers: _headers);
+    return SalesEntry.fromJson((await _decode(r))['entry']);
+  }
+
+  Future<SalesEntry> approveEntry(int id) async {
+    final r = await http.post(Uri.parse('$baseUrl/api/entries/$id/approve'), headers: _headers);
+    return SalesEntry.fromJson((await _decode(r))['entry']);
   }
 
   Future<List<AppUser>> presenters() async {

@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
+          padding: pagePadding(context, top: 26, bottom: 28),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Container(
               padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
@@ -65,9 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ClipOval(child: Image.asset('assets/logo.png', width: 68, height: 68)),
                 ),
                 const SizedBox(height: 18),
-                Text('Sales Calculator', style: display(27, color: headerText)),
-                const SizedBox(height: 7),
-                Text('Closing masuk, angka langsung beres.', style: TextStyle(color: outlined ? colors.muted : Colors.white70, fontSize: 14)),
+                Text('Sales Calculator', textAlign: TextAlign.center, style: display(27, color: headerText)),
+                const SizedBox(height: 9),
+                Text('Closing masuk, angka langsung beres.', textAlign: TextAlign.center, style: TextStyle(color: outlined ? colors.muted : Colors.white70, fontSize: 14)),
               ]),
             ),
             const SizedBox(height: 38),

@@ -65,25 +65,28 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       title: const Text('Cek pembaruan'),
       content: !hasUpdate
           ? Text(_error ?? 'Aplikasi sudah versi terbaru.')
-          : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Versi baru ${release.version} tersedia.'),
-              const SizedBox(height: 14),
-              if (_progress != null) LinearProgressIndicator(value: _progress),
-              if (_progress != null) ...[
-                const SizedBox(height: 8),
-                Text('${((_progress ?? 0) * 100).round()}%'),
-              ],
-              if (_downloaded) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFFFFF4D8), borderRadius: BorderRadius.circular(12)),
-                  child: Text(release.notes.replaceAll(RegExp(r'[#*_`]'), '').trim(), style: const TextStyle(fontSize: 13)),
-                ),
-                const Text('Download selesai. Tekan Update untuk memasang versi baru.'),
-              ],
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-            ]),
+          : SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Versi baru ${release.version} tersedia.'),
+                const SizedBox(height: 14),
+                if (_progress != null) LinearProgressIndicator(value: _progress),
+                if (_progress != null) ...[
+                  const SizedBox(height: 8),
+                  Text('${((_progress ?? 0) * 100).round()}%'),
+                ],
+                if (_downloaded) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: const Color(0xFFFFF4D8), borderRadius: BorderRadius.circular(12)),
+                    child: Text(release.notes.replaceAll(RegExp(r'[#*_`]'), '').trim(), style: const TextStyle(fontSize: 13)),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text('Download selesai. Tekan Update untuk memasang versi baru.'),
+                ],
+                if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+              ]),
+            ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Nanti')),
         if (hasUpdate && !_downloaded) FilledButton(onPressed: _progress == null ? () => _download(release) : null, child: const Text('Download')),

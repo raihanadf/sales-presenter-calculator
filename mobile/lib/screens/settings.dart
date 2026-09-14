@@ -84,10 +84,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: _loading
           ? Center(child: CircularProgressIndicator(color: context.colors.teal))
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              padding: pagePadding(context, top: 12),
               children: [
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(color: context.colors.gold.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(kRadiusSm)),
                   child: Row(children: [
                     Icon(Icons.info_outline_rounded, size: 18, color: context.colors.ink),
@@ -96,10 +96,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ]),
                 ),
                 const SizedBox(height: 18),
-                Panel(padding: const EdgeInsets.all(16), child: Column(children: [
+                Panel(padding: const EdgeInsets.all(18), child: Column(children: [
                   _field(_closingPrice, 'Harga per Closing (Rp)', Icons.sell_rounded),
                   _field(_bopPercent, 'Persentase BOP (%)', Icons.percent_rounded),
-                  _field(_souvenirUnitPrice, 'Harga Souvenir / Audience (Rp)', Icons.card_giftcard_rounded),
+                  _field(_souvenirUnitPrice, 'Harga Souvenir (Rp)', Icons.card_giftcard_rounded),
                   _field(_souvenirPercent, 'Persentase Souvenir (%)', Icons.percent_rounded),
                   _field(_harianDefault, 'Potongan Harian default (Rp)', Icons.remove_circle_outline_rounded, last: true),
                 ])),
@@ -126,7 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _field(TextEditingController c, String label, IconData icon, {bool last = false}) => Padding(
-        padding: EdgeInsets.only(bottom: last ? 0 : 14),
+        padding: EdgeInsets.only(bottom: last ? 0 : 16),
         child: TextField(
           controller: c,
           keyboardType: TextInputType.number,

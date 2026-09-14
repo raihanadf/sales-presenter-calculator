@@ -24,6 +24,35 @@ class Rupiah extends StatelessWidget {
   Widget build(BuildContext context) => Text(rupiah(value), style: display(size, weight: weight, color: color ?? context.colors.ink));
 }
 
+class AdaptiveSplit extends StatelessWidget {
+  final Widget leading;
+  final Widget trailing;
+  final double gap;
+  final bool stretchTrailing;
+  const AdaptiveSplit({super.key, required this.leading, required this.trailing, this.gap = 12, this.stretchTrailing = false});
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (context.usesLargeText || constraints.maxWidth < 280) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                leading,
+                SizedBox(height: gap),
+                stretchTrailing ? SizedBox(width: double.infinity, child: trailing) : Align(alignment: Alignment.centerLeft, child: trailing),
+              ],
+            );
+          }
+          return Row(children: [
+            Expanded(child: leading),
+            SizedBox(width: gap),
+            trailing,
+          ]);
+        },
+      );
+}
+
 class RankPill extends StatelessWidget {
   final int rank;
   final int total;
@@ -71,23 +100,24 @@ class HeroPanel extends StatelessWidget {
                 boxShadow: [BoxShadow(color: colors.tealDark.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 12))],
               ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(label.toUpperCase(), style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
-            if (trailing != null) trailing!,
-          ]),
+          AdaptiveSplit(
+            leading: Text(label.toUpperCase(), style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+            trailing: trailing ?? const SizedBox.shrink(),
+          ),
           const SizedBox(height: 10),
           Rupiah(amount, size: 42, color: foreground),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.only(top: 14),
             decoration: BoxDecoration(border: Border(top: BorderSide(color: foreground.withValues(alpha: 0.35)))),
-            child: Row(children: [
-              Icon(Icons.account_balance_wallet_rounded, size: 16, color: colors.outlined ? colors.ink : colors.mint),
-              const SizedBox(width: 8),
-              Text(subLabel, style: TextStyle(color: muted, fontSize: 13)),
-              const Spacer(),
-              Rupiah(subAmount, size: 16, color: colors.outlined ? colors.ink : colors.mint),
-            ]),
+            child: AdaptiveSplit(
+              leading: Row(children: [
+                Icon(Icons.account_balance_wallet_rounded, size: 18, color: colors.outlined ? colors.ink : colors.mint),
+                const SizedBox(width: 10),
+                Expanded(child: Text(subLabel, style: TextStyle(color: muted, fontSize: 13))),
+              ]),
+              trailing: Rupiah(subAmount, size: 16, color: colors.outlined ? colors.ink : colors.mint),
+            ),
           ),
         ]),
       ),
@@ -126,12 +156,12 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: Row(children: [
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (!context.colors.outlined) ...[
-            Container(width: 4, height: 18, decoration: BoxDecoration(color: context.colors.mint, borderRadius: BorderRadius.circular(2))),
+            Container(width: 4, height: 22, decoration: BoxDecoration(color: context.colors.mint, borderRadius: BorderRadius.circular(2))),
             const SizedBox(width: 10),
           ],
-          Text(text, style: display(18, weight: FontWeight.w700, spacing: -0.3)),
+          Expanded(child: Text(text, style: display(18, weight: FontWeight.w700, spacing: -0.3))),
         ]),
       );
 }
@@ -181,7 +211,7 @@ class TrendBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final max = points.fold<int>(0, (current, point) => math.max(current, point.income));
     return SizedBox(
-      height: 132,
+      height: context.usesLargeText ? 164 : 132,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: points.map((point) {

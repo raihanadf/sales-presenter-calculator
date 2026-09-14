@@ -3,6 +3,7 @@ import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { db } from "../db/client";
 import { salesEntries, users } from "../db/schema";
 import type { Env } from "../types";
+import { presentEntry } from "../serializers";
 
 export const dashboardRoutes = new Hono<Env>();
 
@@ -20,7 +21,12 @@ dashboardRoutes.get("/", async (c) => {
   const todayRows = await d
     .select({ total: sql<number>`coalesce(sum(${salesEntries.takeHome}), 0)` })
     .from(salesEntries)
-    .where(eq(salesEntries.entryDate, date));
+    .where(
+      and(
+        eq(salesEntries.entryDate, date),
+        eq(salesEntries.status, "approved"),
+      ),
+    );
 
   const perPresenter = await d
     .select({
@@ -31,11 +37,23 @@ dashboardRoutes.get("/", async (c) => {
     })
     .from(salesEntries)
     .innerJoin(users, eq(users.id, salesEntries.presenterId))
-    .where(and(gte(salesEntries.entryDate, monthFrom), lte(salesEntries.entryDate, monthTo)))
+    .where(
+      and(
+        gte(salesEntries.entryDate, monthFrom),
+        lte(salesEntries.entryDate, monthTo),
+        eq(salesEntries.status, "approved"),
+      ),
+    )
     .groupBy(users.id, users.name)
     .orderBy(desc(sql`sum(${salesEntries.takeHome})`));
 
   const monthTotal = perPresenter.reduce((sum, r) => sum + r.total, 0);
+  const pending = await d
+    .select({ entry: salesEntries, presenterName: users.name })
+    .from(salesEntries)
+    .innerJoin(users, eq(users.id, salesEntries.presenterId))
+    .where(eq(salesEntries.status, "pending"))
+    .orderBy(desc(salesEntries.createdAt));
 
   return c.json({
     date,
@@ -44,6 +62,9 @@ dashboardRoutes.get("/", async (c) => {
     monthIncome: monthTotal,
     top3: perPresenter.slice(0, 3),
     monthRecap: perPresenter,
+    pending: pending.map((row) =>
+      presentEntry(row.entry, row.presenterName),
+    ),
   });
 });
 
@@ -58,7 +79,7 @@ dashboardRoutes.get("/me", async (c) => {
   const monthTo = `${month}-31`;
   const d = db(c.env.DB);
 
-  // all my entries this month, newest first.
+  // approved entries own every income statistic.
   const mine = await d
     .select()
     .from(salesEntries)
@@ -67,9 +88,18 @@ dashboardRoutes.get("/me", async (c) => {
         eq(salesEntries.presenterId, me.id),
         gte(salesEntries.entryDate, monthFrom),
         lte(salesEntries.entryDate, monthTo),
+        eq(salesEntries.status, "approved"),
       ),
     )
     .orderBy(desc(salesEntries.entryDate), desc(salesEntries.id));
+
+  // pending rows stay visible while waiting for admin approval.
+  const recent = await d
+    .select()
+    .from(salesEntries)
+    .where(eq(salesEntries.presenterId, me.id))
+    .orderBy(desc(salesEntries.entryDate), desc(salesEntries.id))
+    .limit(10);
 
   const monthIncome = mine.reduce((s, e) => s + e.takeHome, 0);
   const monthClosings = mine.reduce((s, e) => s + e.closingCount, 0);
@@ -96,7 +126,13 @@ dashboardRoutes.get("/me", async (c) => {
       total: sql<number>`sum(${salesEntries.takeHome})`,
     })
     .from(salesEntries)
-    .where(and(gte(salesEntries.entryDate, monthFrom), lte(salesEntries.entryDate, monthTo)))
+    .where(
+      and(
+        gte(salesEntries.entryDate, monthFrom),
+        lte(salesEntries.entryDate, monthTo),
+        eq(salesEntries.status, "approved"),
+      ),
+    )
     .groupBy(salesEntries.presenterId)
     .orderBy(desc(sql`sum(${salesEntries.takeHome})`));
   const rank = ranked.findIndex((r) => r.presenterId === me.id);
@@ -114,11 +150,12 @@ dashboardRoutes.get("/me", async (c) => {
     rank: rank >= 0 ? rank + 1 : null,
     totalPresenters: ranked.length,
     trend,
-    recent: mine.slice(0, 5).map((e) => ({
+    recent: recent.map((e) => ({
       id: e.id,
       entryDate: e.entryDate,
       closingCount: e.closingCount,
       takeHome: e.takeHome,
+      status: e.status,
     })),
   });
 });

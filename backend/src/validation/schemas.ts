@@ -40,6 +40,15 @@ export const previewSchema = z.object({
   harian: z.number().int().nonnegative().optional(),
 });
 
+export const entryListQuerySchema = z.object({
+  presenterId: z.coerce.number().int().positive().optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  page: z.coerce.number().int().positive().default(1),
+});
+
+export const entryIdSchema = z.coerce.number().int().positive();
+
 export type LoginDto = z.infer<typeof loginSchema>;
 export type CreatePresenterDto = z.infer<typeof createPresenterSchema>;
 export type UpdateSettingsDto = z.infer<typeof updateSettingsSchema>;

@@ -49,7 +49,7 @@ class _PresentersScreenState extends State<PresentersScreen> {
           final list = snap.data!;
           if (list.isEmpty) return const Center(child: EmptyNote('Belum ada presenter. Tambah lewat tombol di bawah.'));
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+            padding: pagePadding(context, top: 12, bottom: 110),
             itemCount: list.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (_, i) => Panel(
@@ -112,28 +112,31 @@ class _AddPresenterSheetState extends State<_AddPresenterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 14, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: context.colors.line, borderRadius: BorderRadius.circular(2)))),
-        const SizedBox(height: 18),
-        Text('Presenter baru', style: display(20)),
-        const SizedBox(height: 18),
-        TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nama', prefixIcon: Icon(Icons.badge_outlined))),
-        const SizedBox(height: 12),
-        TextField(controller: _username, decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.alternate_email_rounded))),
-        const SizedBox(height: 12),
-        TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (min 6)', prefixIcon: Icon(Icons.lock_outline_rounded))),
-        if (_error != null) ...[
-          const SizedBox(height: 12),
-          Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-        ],
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: _saving ? null : _submit,
-          child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Simpan'),
-        ),
-      ]),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(left: context.pageInset, right: context.pageInset, top: 14, bottom: MediaQuery.viewInsetsOf(context).bottom + 24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: context.colors.line, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 20),
+          Text('Presenter baru', style: display(20)),
+          const SizedBox(height: 20),
+          TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nama', prefixIcon: Icon(Icons.badge_outlined))),
+          const SizedBox(height: 16),
+          TextField(controller: _username, decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.alternate_email_rounded))),
+          const SizedBox(height: 16),
+          TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (min 6)', prefixIcon: Icon(Icons.lock_outline_rounded))),
+          if (_error != null) ...[
+            const SizedBox(height: 14),
+            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+          ],
+          const SizedBox(height: 22),
+          FilledButton(
+            onPressed: _saving ? null : _submit,
+            child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Simpan'),
+          ),
+        ]),
+      ),
     );
   }
 }

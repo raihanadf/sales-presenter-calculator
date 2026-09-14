@@ -101,7 +101,7 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Catat Closing')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: pagePadding(context, top: 10),
         children: [
           _ReceiptCard(preview: _preview, settings: _settings!, harian: _harian.text.trim().isEmpty ? _settings!.harianDefault : _int(_harian)),
           const SizedBox(height: 22),
@@ -193,10 +193,10 @@ class _ReceiptCard extends StatelessWidget {
             _row('Souvenir (${settings.souvenirPercent}%)', p.souvenirValue, true, foreground, muted),
             _row('Potongan harian', harian, true, foreground, muted),
             Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: DashedLine(color: foreground.withValues(alpha: 0.45))),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('Diterima presenter', style: TextStyle(color: foreground, fontSize: 14, fontWeight: FontWeight.w700)),
-              Rupiah(p.takeHome, size: 30, color: colors.outlined ? colors.ink : colors.mint),
-            ]),
+            AdaptiveSplit(
+              leading: Text('Diterima presenter', style: TextStyle(color: foreground, fontSize: 14, fontWeight: FontWeight.w700)),
+              trailing: Rupiah(p.takeHome, size: 30, color: colors.outlined ? colors.ink : colors.mint),
+            ),
           ],
         ]),
       ),
@@ -204,11 +204,11 @@ class _ReceiptCard extends StatelessWidget {
   }
 
   Widget _row(String label, int value, bool minus, Color foreground, Color muted) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(label, style: TextStyle(color: muted, fontSize: 14)),
-          Text('${minus ? '− ' : ''}${rupiah(value)}', style: display(15, weight: FontWeight.w600, color: foreground, spacing: 0)),
-        ]),
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: AdaptiveSplit(
+          leading: Text(label, style: TextStyle(color: muted, fontSize: 14)),
+          trailing: Text('${minus ? '− ' : ''}${rupiah(value)}', style: display(15, weight: FontWeight.w600, color: foreground, spacing: 0)),
+        ),
       );
 }
 

@@ -1,11 +1,17 @@
 import { Hono } from "hono";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { salesEntries, users } from "../db/schema";
 import { loadSettings } from "../lib/settings";
 import { calculate } from "../lib/calc";
-import { entryInputSchema, previewSchema } from "../validation/schemas";
+import {
+  entryIdSchema,
+  entryInputSchema,
+  entryListQuerySchema,
+  previewSchema,
+} from "../validation/schemas";
 import { presentEntry } from "../serializers";
+import { requireAdmin } from "../middleware/auth";
 import type { Env } from "../types";
 
 export const entryRoutes = new Hono<Env>();
@@ -26,10 +32,10 @@ entryRoutes.post("/", async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 422);
 
   const me = c.get("user");
-  // presenters can only file for themselves; admin may target any presenter.
   const presenterId =
     me.role === "admin" ? (parsed.data.presenterId ?? me.id) : me.id;
-
+  const status = me.role === "admin" ? "approved" : "pending";
+  const now = Date.now();
   const s = await loadSettings(c.env.DB);
   const harian = parsed.data.harian ?? s.harianDefault;
   const computed = calculate({ ...parsed.data, harian }, s);
@@ -39,51 +45,78 @@ entryRoutes.post("/", async (c) => {
     .values({
       presenterId,
       entryDate: parsed.data.entryDate,
+      status,
       closingCount: parsed.data.closingCount,
       bopInput: parsed.data.bopInput,
       audienceCount: parsed.data.audienceCount,
       harian,
+      closingPriceUsed: s.closingPrice,
+      bopPercentUsed: s.bopPercent,
+      souvenirUnitPriceUsed: s.souvenirUnitPrice,
+      souvenirPercentUsed: s.souvenirPercent,
       closingTotal: computed.closingTotal,
       bopValue: computed.bopValue,
       souvenirValue: computed.souvenirValue,
       takeHome: computed.takeHome,
-      createdAt: Date.now(),
+      approvedAt: status === "approved" ? now : null,
+      approvedBy: status === "approved" ? me.id : null,
+      createdAt: now,
     })
     .returning();
   return c.json({ entry: presentEntry(inserted[0]) }, 201);
 });
 
-// list with optional filters. presenters are scoped to their own rows.
+// presenters are scoped to their own rows. every page contains 20 rows.
 entryRoutes.get("/", async (c) => {
   const me = c.get("user");
-  const q = c.req.query();
+  const parsed = entryListQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 422);
 
+  const q = parsed.data;
   const filters = [];
   if (me.role === "admin") {
-    if (q.presenterId) filters.push(eq(salesEntries.presenterId, Number(q.presenterId)));
+    if (q.presenterId) filters.push(eq(salesEntries.presenterId, q.presenterId));
   } else {
     filters.push(eq(salesEntries.presenterId, me.id));
   }
   if (q.from) filters.push(gte(salesEntries.entryDate, q.from));
   if (q.to) filters.push(lte(salesEntries.entryDate, q.to));
 
-  const rows = await db(c.env.DB)
+  const condition = filters.length ? and(...filters) : undefined;
+  const d = db(c.env.DB);
+  const totals = await d
+    .select({ total: sql<number>`count(*)` })
+    .from(salesEntries)
+    .where(condition);
+  const rows = await d
     .select({ entry: salesEntries, presenterName: users.name })
     .from(salesEntries)
     .innerJoin(users, eq(users.id, salesEntries.presenterId))
-    .where(filters.length ? and(...filters) : undefined)
-    .orderBy(desc(salesEntries.entryDate), desc(salesEntries.id));
+    .where(condition)
+    .orderBy(desc(salesEntries.entryDate), desc(salesEntries.id))
+    .limit(20)
+    .offset((q.page - 1) * 20);
+  const total = totals[0].total;
 
-  return c.json({ entries: rows.map((r) => presentEntry(r.entry, r.presenterName)) });
+  return c.json({
+    entries: rows.map((r) => presentEntry(r.entry, r.presenterName)),
+    page: q.page,
+    pageSize: 20,
+    total,
+    totalPages: Math.ceil(total / 20),
+  });
 });
 
 entryRoutes.get("/:id", async (c) => {
   const me = c.get("user");
+  const id = entryIdSchema.safeParse(c.req.param("id"));
+  if (!id.success) return c.json({ error: id.error.flatten() }, 422);
+
   const rows = await db(c.env.DB)
     .select({ entry: salesEntries, presenterName: users.name })
     .from(salesEntries)
     .innerJoin(users, eq(users.id, salesEntries.presenterId))
-    .where(eq(salesEntries.id, Number(c.req.param("id"))));
+    .where(eq(salesEntries.id, id.data));
 
   const row = rows[0];
   if (!row) return c.json({ error: "entry not found" }, 404);
@@ -91,4 +124,35 @@ entryRoutes.get("/:id", async (c) => {
     return c.json({ error: "forbidden" }, 403);
   }
   return c.json({ entry: presentEntry(row.entry, row.presenterName) });
+});
+
+entryRoutes.post("/:id/approve", requireAdmin, async (c) => {
+  const id = entryIdSchema.safeParse(c.req.param("id"));
+  if (!id.success) return c.json({ error: id.error.flatten() }, 422);
+
+  const updated = await db(c.env.DB)
+    .update(salesEntries)
+    .set({
+      status: "approved",
+      approvedAt: Date.now(),
+      approvedBy: c.get("user").id,
+    })
+    .where(
+      and(
+        eq(salesEntries.id, id.data),
+        eq(salesEntries.status, "pending"),
+      ),
+    )
+    .returning();
+  if (!updated[0]) {
+    const existing = await db(c.env.DB)
+      .select({ id: salesEntries.id })
+      .from(salesEntries)
+      .where(eq(salesEntries.id, id.data));
+    return existing[0]
+      ? c.json({ error: "entry already approved" }, 409)
+      : c.json({ error: "entry not found" }, 404);
+  }
+
+  return c.json({ entry: presentEntry(updated[0]) });
 });
