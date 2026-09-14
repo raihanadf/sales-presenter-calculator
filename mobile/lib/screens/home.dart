@@ -8,6 +8,7 @@ import 'entry_form.dart';
 import 'presenters.dart';
 import 'settings.dart';
 import '../util/format.dart';
+import '../update_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -54,6 +55,15 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text('Beranda'),
         ]),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Menu',
+            onSelected: (value) {
+              if (value == 'update') showUpdateCheck(context);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'update', child: Text('Cek pembaruan')),
+            ],
+          ),
           if (_isAdmin)
             IconButton(
               tooltip: 'Kelola',
