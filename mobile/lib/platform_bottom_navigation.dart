@@ -21,7 +21,7 @@ class PlatformBottomNavigation extends StatelessWidget {
         onTap: onDestinationSelected,
         horizontalMargin: context.pageInset,
         bottomSpacing: 12,
-        activeColor: context.colors.tealDark,
+        activeColor: context.colors.ink,
         inactiveColor: context.colors.muted,
         items: const [
           LiquidGlassBottomBarItem(
