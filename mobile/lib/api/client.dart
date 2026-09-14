@@ -56,7 +56,8 @@ class ApiClient {
 
   Future<AppUser> login(String username, String password) async {
     final r = await http.post(Uri.parse('$baseUrl/auth/login'),
-        headers: _headers, body: jsonEncode({'username': username, 'password': password}));
+        headers: _headers,
+        body: jsonEncode({'username': username, 'password': password}));
     final body = await _decode(r);
     await _saveToken(body['token']);
     final prefs = await SharedPreferences.getInstance();
@@ -93,7 +94,8 @@ class ApiClient {
   }
 
   Future<Settings> settings() async {
-    final r = await http.get(Uri.parse('$baseUrl/api/settings'), headers: _headers);
+    final r =
+        await http.get(Uri.parse('$baseUrl/api/settings'), headers: _headers);
     return Settings.fromJson((await _decode(r))['settings']);
   }
 
@@ -103,7 +105,8 @@ class ApiClient {
     return Settings.fromJson((await _decode(r))['settings']);
   }
 
-  Future<Computed> preview(int closingCount, int bopInput, int audienceCount, int? harian) async {
+  Future<Computed> preview(
+      int closingCount, int bopInput, int audienceCount, int? harian) async {
     final r = await http.post(Uri.parse('$baseUrl/api/entries/preview'),
         headers: _headers,
         body: jsonEncode({
@@ -137,25 +140,52 @@ class ApiClient {
   }
 
   Future<SalesEntry> entry(int id) async {
-    final r = await http.get(Uri.parse('$baseUrl/api/entries/$id'), headers: _headers);
+    final r = await http.get(Uri.parse('$baseUrl/api/entries/$id'),
+        headers: _headers);
     return SalesEntry.fromJson((await _decode(r))['entry']);
   }
 
   Future<SalesEntry> approveEntry(int id) async {
-    final r = await http.post(Uri.parse('$baseUrl/api/entries/$id/approve'), headers: _headers);
+    final r = await http.post(Uri.parse('$baseUrl/api/entries/$id/approve'),
+        headers: _headers);
     return SalesEntry.fromJson((await _decode(r))['entry']);
   }
 
-  Future<List<AppUser>> presenters() async {
-    final r = await http.get(Uri.parse('$baseUrl/api/presenters'), headers: _headers);
-    final body = await _decode(r);
-    return (body['presenters'] as List).map((e) => AppUser.fromJson(e)).toList();
+  // admin bulk import: one presenter, many dated rows. returns inserted count.
+  Future<int> bulkImport(
+      int presenterId, List<Map<String, dynamic>> rows) async {
+    final r = await http.post(Uri.parse('$baseUrl/api/entries/bulk'),
+        headers: _headers,
+        body: jsonEncode({'presenterId': presenterId, 'rows': rows}));
+    return (await _decode(r))['inserted'] as int;
   }
 
-  Future<AppUser> createPresenter(String name, String username, String password) async {
+  // admin month recap: every approved entry in a yyyy-mm period, unpaginated.
+  Future<List<SalesEntry>> monthEntries(String month) async {
+    final uri = Uri.parse('$baseUrl/api/entries/month')
+        .replace(queryParameters: {'month': month});
+    final r = await http.get(uri, headers: _headers);
+    final body = await _decode(r);
+    return (body['entries'] as List)
+        .map((e) => SalesEntry.fromJson(e))
+        .toList();
+  }
+
+  Future<List<AppUser>> presenters() async {
+    final r =
+        await http.get(Uri.parse('$baseUrl/api/presenters'), headers: _headers);
+    final body = await _decode(r);
+    return (body['presenters'] as List)
+        .map((e) => AppUser.fromJson(e))
+        .toList();
+  }
+
+  Future<AppUser> createPresenter(
+      String name, String username, String password) async {
     final r = await http.post(Uri.parse('$baseUrl/api/presenters'),
         headers: _headers,
-        body: jsonEncode({'name': name, 'username': username, 'password': password}));
+        body: jsonEncode(
+            {'name': name, 'username': username, 'password': password}));
     return AppUser.fromJson((await _decode(r))['presenter']);
   }
 }

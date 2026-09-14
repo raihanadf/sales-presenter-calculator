@@ -9,6 +9,8 @@ import {
   entryInputSchema,
   entryListQuerySchema,
   previewSchema,
+  bulkImportSchema,
+  monthQuerySchema,
 } from "../validation/schemas";
 import { presentEntry } from "../serializers";
 import { requireAdmin } from "../middleware/auth";
@@ -104,6 +106,76 @@ entryRoutes.get("/", async (c) => {
     pageSize: 20,
     total,
     totalPages: Math.ceil(total / 20),
+  });
+});
+
+// admin bulk import from an excel upload. one presenter, many dated rows.
+// registered before "/:id" so "bulk" is not read as an entry id.
+entryRoutes.post("/bulk", requireAdmin, async (c) => {
+  const parsed = bulkImportSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 422);
+
+  const d = db(c.env.DB);
+  const presenter = await d.query.users.findFirst({
+    where: eq(users.id, parsed.data.presenterId),
+  });
+  if (!presenter) return c.json({ error: "presenter not found" }, 404);
+
+  const s = await loadSettings(c.env.DB);
+  const now = Date.now();
+  const adminId = c.get("user").id;
+  const values = parsed.data.rows.map((row) => {
+    const harian = row.harian ?? s.harianDefault;
+    const computed = calculate({ ...row, harian }, s);
+    return {
+      presenterId: parsed.data.presenterId,
+      entryDate: row.entryDate,
+      status: "approved" as const,
+      closingCount: row.closingCount,
+      bopInput: row.bopInput,
+      audienceCount: row.audienceCount,
+      harian,
+      closingPriceUsed: s.closingPrice,
+      bopPercentUsed: s.bopPercent,
+      souvenirUnitPriceUsed: s.souvenirUnitPrice,
+      souvenirPercentUsed: s.souvenirPercent,
+      closingTotal: computed.closingTotal,
+      bopValue: computed.bopValue,
+      souvenirValue: computed.souvenirValue,
+      takeHome: computed.takeHome,
+      approvedAt: now,
+      approvedBy: adminId,
+      createdAt: now,
+    };
+  });
+
+  const inserted = await d.insert(salesEntries).values(values).returning({ id: salesEntries.id });
+  return c.json({ inserted: inserted.length }, 201);
+});
+
+// admin month recap: every approved entry in a yyyy-mm period, unpaginated,
+// for the pdf export. registered before "/:id".
+entryRoutes.get("/month", requireAdmin, async (c) => {
+  const parsed = monthQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 422);
+
+  const month = parsed.data.month;
+  const rows = await db(c.env.DB)
+    .select({ entry: salesEntries, presenterName: users.name })
+    .from(salesEntries)
+    .innerJoin(users, eq(users.id, salesEntries.presenterId))
+    .where(
+      and(
+        gte(salesEntries.entryDate, `${month}-01`),
+        lte(salesEntries.entryDate, `${month}-31`),
+        eq(salesEntries.status, "approved"),
+      ),
+    )
+    .orderBy(salesEntries.entryDate, salesEntries.id);
+
+  return c.json({
+    month,
+    entries: rows.map((r) => presentEntry(r.entry, r.presenterName)),
   });
 });
 

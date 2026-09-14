@@ -40,6 +40,29 @@ export const previewSchema = z.object({
   harian: z.number().int().nonnegative().optional(),
 });
 
+// admin excel import: many rows for one presenter. harian optional per row,
+// falls back to the settings default in the handler.
+export const bulkImportSchema = z.object({
+  presenterId: z.number().int().positive(),
+  rows: z
+    .array(
+      z.object({
+        entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        closingCount: z.number().int().nonnegative(),
+        bopInput: z.number().int().nonnegative(),
+        audienceCount: z.number().int().nonnegative(),
+        harian: z.number().int().nonnegative().optional(),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+// month recap export takes a yyyy-mm period.
+export const monthQuerySchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+});
+
 export const entryListQuerySchema = z.object({
   presenterId: z.coerce.number().int().positive().optional(),
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -54,3 +77,5 @@ export type CreatePresenterDto = z.infer<typeof createPresenterSchema>;
 export type UpdateSettingsDto = z.infer<typeof updateSettingsSchema>;
 export type EntryInputDto = z.infer<typeof entryInputSchema>;
 export type PreviewDto = z.infer<typeof previewSchema>;
+export type BulkImportDto = z.infer<typeof bulkImportSchema>;
+export type MonthQueryDto = z.infer<typeof monthQuerySchema>;

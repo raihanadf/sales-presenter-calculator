@@ -9,6 +9,7 @@ import 'entry_form.dart';
 import 'entry_detail.dart';
 import 'history.dart';
 import 'settings_hub.dart';
+import 'import_export.dart';
 import '../util/format.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -311,6 +312,33 @@ class _AdminBody extends StatelessWidget {
             amount: data.todayIncome,
             subLabel: 'Bulan ini',
             subAmount: data.monthIncome),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final ok = await showImportSheet(context);
+                if (ok == true) {
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Closing berhasil diimport.')),
+                  );
+                  await onChanged();
+                }
+              },
+              icon: const Icon(Icons.file_upload_outlined),
+              label: const Text('Import'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => showExportSheet(context),
+              icon: const Icon(Icons.file_download_outlined),
+              label: const Text('Export'),
+            ),
+          ),
+        ]),
         const SizedBox(height: 26),
         const SectionTitle('Menunggu persetujuan'),
         if (data.pending.isEmpty)
