@@ -1,0 +1,27 @@
+{
+  "name": "sales-presenter-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:create": "wrangler d1 create sales_presenter",
+    "db:migrate:local": "wrangler d1 migrations apply sales_presenter --local",
+    "db:migrate:remote": "wrangler d1 migrations apply sales_presenter --remote",
+    "seed:local": "wrangler d1 execute sales_presenter --local --file=./seed.sql",
+    "seed:remote": "wrangler d1 execute sales_presenter --remote --file=./seed.prod.sql"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.28.1",
+    "wrangler": "^3.90.0",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.7.2"
+  }
+}
