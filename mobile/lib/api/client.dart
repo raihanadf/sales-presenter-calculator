@@ -79,24 +79,50 @@ class ApiClient {
     await prefs.remove('user');
   }
 
+  // dashboards cache their last good payload so an offline reload shows the
+  // last-known figures instead of a network error.
   Future<Dashboard> dashboard(String date, String month) async {
-    final r = await http.get(
-        Uri.parse('$baseUrl/api/dashboard?date=$date&month=$month'),
-        headers: _headers);
-    return Dashboard.fromJson(await _decode(r));
+    return Dashboard.fromJson(await _cachedGet(
+        '/api/dashboard?date=$date&month=$month', 'dash_admin_cache'));
   }
 
   Future<MyDashboard> dashboardMe(String date, String month) async {
-    final r = await http.get(
-        Uri.parse('$baseUrl/api/dashboard/me?date=$date&month=$month'),
-        headers: _headers);
-    return MyDashboard.fromJson(await _decode(r));
+    return MyDashboard.fromJson(await _cachedGet(
+        '/api/dashboard/me?date=$date&month=$month', 'dash_me_cache'));
+  }
+
+  // gets json, caching it on success; on a network error returns the last
+  // cached copy. server errors (reachable) still throw.
+  Future<Map<String, dynamic>> _cachedGet(String path, String cacheKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final r = await http.get(Uri.parse('$baseUrl$path'), headers: _headers);
+      final json = await _decode(r) as Map<String, dynamic>;
+      await prefs.setString(cacheKey, jsonEncode(json));
+      return json;
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      final cached = prefs.getString(cacheKey);
+      if (cached != null) return jsonDecode(cached) as Map<String, dynamic>;
+      rethrow;
+    }
   }
 
   Future<Settings> settings() async {
     final r =
         await http.get(Uri.parse('$baseUrl/api/settings'), headers: _headers);
-    return Settings.fromJson((await _decode(r))['settings']);
+    final json = (await _decode(r))['settings'];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('settings_cache', jsonEncode(json));
+    return Settings.fromJson(json);
+  }
+
+  // last settings we saw online, so the entry form can preview offline.
+  Future<Settings?> cachedSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('settings_cache');
+    return raw == null ? null : Settings.fromJson(jsonDecode(raw));
   }
 
   Future<Settings> updateSettings(Map<String, int> data) async {

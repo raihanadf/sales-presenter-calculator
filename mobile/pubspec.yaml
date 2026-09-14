@@ -1,7 +1,7 @@
 name: sales_presenter
 description: Sales presenter calculator app.
 publish_to: "none"
-version: 1.0.8+9
+version: 1.0.9+10
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -21,6 +21,7 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   file_picker: ^13.0.0
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0

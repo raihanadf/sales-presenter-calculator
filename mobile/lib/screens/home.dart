@@ -39,20 +39,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh() async {
+    await context.read<AppState>().syncPending();
     setState(_load);
     await _future;
   }
 
   Future<void> _openEntry() async {
-    final saved = await Navigator.of(context)
-        .push<bool>(MaterialPageRoute(builder: (_) => const EntryFormScreen()));
-    if (saved == true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Closing tersimpan. Menunggu persetujuan admin.')),
-        );
-      }
+    final result = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const EntryFormScreen()));
+    if (result != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result == 'offline'
+              ? 'Closing tersimpan offline. Akan disinkron saat online.'
+              : 'Closing tersimpan. Menunggu persetujuan admin.'),
+        ),
+      );
       await _refresh();
     }
   }
@@ -90,37 +92,100 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: _selectedIndex == 1
             ? const SettingsHubBody()
-            : RefreshIndicator(
-                color: context.colors.teal,
-                onRefresh: _refresh,
-                child: FutureBuilder<Object>(
-                  future: _future,
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: CircularProgressIndicator(
-                          color: context.colors.teal,
-                        ),
-                      );
-                    }
-                    if (snap.hasError) {
-                      return _ErrorView(
-                        message: '${snap.error}',
-                        onRetry: _refresh,
-                      );
-                    }
-                    final data = snap.data!;
-                    if (data is MyDashboard) {
-                      return _MyBody(data: data, name: name);
-                    }
-                    return _AdminBody(
-                      data: data as Dashboard,
-                      name: name,
-                      onChanged: _refresh,
-                    );
-                  },
-                ),
+            : Column(
+                children: [
+                  const _SyncBanner(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: context.colors.teal,
+                      onRefresh: _refresh,
+                      child: FutureBuilder<Object>(
+                        future: _future,
+                        builder: (context, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return Center(
+                              child: CircularProgressIndicator(
+                                color: context.colors.teal,
+                              ),
+                            );
+                          }
+                          if (snap.hasError) {
+                            return _ErrorView(
+                              message: '${snap.error}',
+                              onRetry: _refresh,
+                            );
+                          }
+                          final data = snap.data!;
+                          if (data is MyDashboard) {
+                            return _MyBody(data: data, name: name);
+                          }
+                          return _AdminBody(
+                            data: data as Dashboard,
+                            name: name,
+                            onChanged: _refresh,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
+      ),
+    );
+  }
+}
+
+// shows the current offline / pending-sync state. hidden when online with an
+// empty queue.
+class _SyncBanner extends StatelessWidget {
+  const _SyncBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final offline = !state.online;
+    final pending = state.pendingCount;
+    if (!offline && pending == 0) return const SizedBox.shrink();
+    final colors = context.colors;
+
+    final String text;
+    if (offline && pending > 0) {
+      text = 'Mode offline · $pending closing menunggu sinkron';
+    } else if (offline) {
+      text = 'Mode offline · closing disimpan di HP dulu';
+    } else {
+      text = '$pending closing menunggu sinkron';
+    }
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(context.pageInset, 10, context.pageInset, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.gold.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(16),
+        border:
+            Border.all(color: colors.line, width: colors.outlined ? 1.5 : 1),
+      ),
+      child: Row(
+        children: [
+          Icon(offline ? Icons.cloud_off_rounded : Icons.cloud_upload_rounded,
+              size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child:
+                Text(text, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          if (state.syncing)
+            const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2))
+          else if (!offline && pending > 0)
+            TextButton(
+              onPressed: () => context.read<AppState>().syncPending(),
+              child: const Text('Sinkron'),
+            ),
+        ],
       ),
     );
   }
