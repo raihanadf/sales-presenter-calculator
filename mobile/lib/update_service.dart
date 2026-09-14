@@ -9,8 +9,9 @@ import 'package:path_provider/path_provider.dart';
 class ReleaseInfo {
   final String version;
   final Uri downloadUrl;
+  final String notes;
 
-  const ReleaseInfo({required this.version, required this.downloadUrl});
+  const ReleaseInfo({required this.version, required this.downloadUrl, required this.notes});
 }
 
 class UpdateService {
@@ -24,7 +25,11 @@ class UpdateService {
     final tag = (release['tag_name'] as String).replaceFirst(RegExp(r'^v'), '');
     final assets = release['assets'] as List<dynamic>;
     final apk = assets.cast<Map<String, dynamic>>().firstWhere((asset) => (asset['name'] as String).endsWith('.apk'));
-    return ReleaseInfo(version: tag, downloadUrl: Uri.parse(apk['browser_download_url'] as String));
+    return ReleaseInfo(
+      version: tag,
+      downloadUrl: Uri.parse(apk['browser_download_url'] as String),
+      notes: release['body'] as String,
+    );
   }
 
   Future<String> download(ReleaseInfo release, void Function(int received, int total) onProgress) async {

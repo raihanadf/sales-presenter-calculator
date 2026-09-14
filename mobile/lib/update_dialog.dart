@@ -73,7 +73,16 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 const SizedBox(height: 8),
                 Text('${((_progress ?? 0) * 100).round()}%'),
               ],
-              if (_downloaded) const Text('Download selesai. Tekan Update untuk memasang versi baru.'),
+              if (_downloaded) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: const Color(0xFFFFF4D8), borderRadius: BorderRadius.circular(12)),
+                  child: Text(release.notes.trim(), style: const TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(height: 10),
+                const Text('Download selesai. Tekan Update untuk memasang versi baru.'),
+              ],
               if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
             ]),
       actions: [
