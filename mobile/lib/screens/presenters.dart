@@ -26,7 +26,7 @@ class _PresentersScreenState extends State<PresentersScreen> {
   }
 
   Future<void> _add() async {
-    final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, backgroundColor: AppColors.card, builder: (_) => const _AddPresenterSheet());
+    final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, backgroundColor: context.colors.card, builder: (_) => const _AddPresenterSheet());
     if (created == true) setState(_reload);
   }
 
@@ -36,16 +36,16 @@ class _PresentersScreenState extends State<PresentersScreen> {
       appBar: AppBar(title: const Text('Presenter')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _add,
-        backgroundColor: AppColors.mint,
-        foregroundColor: AppColors.ink,
+        backgroundColor: context.colors.mint,
+        foregroundColor: context.colors.ink,
         icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: Text('Tambah', style: display(15, weight: FontWeight.w700, color: AppColors.ink, spacing: 0)),
+        label: Text('Tambah', style: display(15, weight: FontWeight.w700, color: context.colors.ink, spacing: 0)),
       ),
       body: FutureBuilder<List<AppUser>>(
         future: _future,
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.teal));
-          if (snap.hasError) return Center(child: Text('${snap.error}', style: const TextStyle(color: AppColors.muted)));
+          if (snap.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: context.colors.teal));
+          if (snap.hasError) return Center(child: Text('${snap.error}', style: TextStyle(color: context.colors.muted)));
           final list = snap.data!;
           if (list.isEmpty) return const Center(child: EmptyNote('Belum ada presenter. Tambah lewat tombol di bawah.'));
           return ListView.separated(
@@ -56,13 +56,13 @@ class _PresentersScreenState extends State<PresentersScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(children: [
                 Container(width: 44, height: 44, alignment: Alignment.center,
-                  decoration: BoxDecoration(color: AppColors.teal.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-                  child: Text(list[i].name.isNotEmpty ? list[i].name[0].toUpperCase() : '?', style: display(18, color: AppColors.teal, spacing: 0))),
+                  decoration: BoxDecoration(color: context.colors.teal.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                  child: Text(list[i].name.isNotEmpty ? list[i].name[0].toUpperCase() : '?', style: display(18, color: context.colors.teal, spacing: 0))),
                 const SizedBox(width: 14),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(list[i].name, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink, fontSize: 15)),
+                  Text(list[i].name, style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.ink, fontSize: 15)),
                   const SizedBox(height: 2),
-                  Text('@${list[i].username}', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                  Text('@${list[i].username}', style: TextStyle(color: context.colors.muted, fontSize: 13)),
                 ])),
               ]),
             ),
@@ -115,7 +115,7 @@ class _AddPresenterSheetState extends State<_AddPresenterSheet> {
     return Padding(
       padding: EdgeInsets.only(left: 20, right: 20, top: 14, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2)))),
+        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: context.colors.line, borderRadius: BorderRadius.circular(2)))),
         const SizedBox(height: 18),
         Text('Presenter baru', style: display(20)),
         const SizedBox(height: 18),

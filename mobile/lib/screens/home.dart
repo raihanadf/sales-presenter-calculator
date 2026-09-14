@@ -58,9 +58,18 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<String>(
             tooltip: 'Menu',
             onSelected: (value) {
-              if (value == 'update') showUpdateCheck(context);
+              if (value == 'update') {
+                showUpdateCheck(context);
+                return;
+              }
+              showModalBottomSheet<void>(
+                context: context,
+                backgroundColor: context.colors.card,
+                builder: (_) => const _ThemePicker(),
+              );
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'theme', child: Text('Ganti tema')),
               PopupMenuItem(value: 'update', child: Text('Cek pembaruan')),
             ],
           ),
@@ -69,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
               tooltip: 'Kelola',
               icon: const Icon(Icons.tune_rounded),
               onPressed: () async {
-                await showModalBottomSheet(context: context, backgroundColor: AppColors.card, builder: (_) => const _AdminMenu());
+                await showModalBottomSheet(context: context, backgroundColor: context.colors.card, builder: (_) => const _AdminMenu());
                 _refresh();
               },
             ),
@@ -81,19 +90,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ? null
           : FloatingActionButton.extended(
               onPressed: _openEntry,
-              backgroundColor: AppColors.mint,
-              foregroundColor: AppColors.ink,
+              backgroundColor: context.colors.mint,
+              foregroundColor: context.colors.ink,
               icon: const Icon(Icons.add_rounded),
-              label: Text('Catat Closing', style: display(15, weight: FontWeight.w700, color: AppColors.ink, spacing: 0)),
+              label: Text('Catat Closing', style: display(15, weight: FontWeight.w700, color: context.colors.ink, spacing: 0)),
             ),
       body: RefreshIndicator(
-        color: AppColors.teal,
+        color: context.colors.teal,
         onRefresh: _refresh,
         child: FutureBuilder<Object>(
           future: _future,
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.teal));
+              return Center(child: CircularProgressIndicator(color: context.colors.teal));
             }
             if (snap.hasError) return _ErrorView(message: '${snap.error}', onRetry: _refresh);
             final data = snap.data!;
@@ -120,7 +129,7 @@ class _MyBody extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 14),
-          child: Text('Halo, $name', style: const TextStyle(color: AppColors.muted, fontSize: 15)),
+          child: Text('Halo, $name', style: TextStyle(color: context.colors.muted, fontSize: 15)),
         ),
         HeroPanel(
           label: 'Pendapatan hari ini',
@@ -143,13 +152,13 @@ class _MyBody extends StatelessWidget {
           Panel(
             padding: const EdgeInsets.all(14),
             child: Row(children: [
-              Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.gold.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.star_rounded, color: AppColors.gold)),
+              Container(width: 44, height: 44, decoration: BoxDecoration(color: context.colors.gold.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
+                child: Icon(Icons.star_rounded, color: context.colors.gold)),
               const SizedBox(width: 14),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Rupiah(data.bestTakeHome, size: 20),
                 const SizedBox(height: 2),
-                Text(data.bestDate ?? '', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                Text(data.bestDate ?? '', style: TextStyle(color: context.colors.muted, fontSize: 13)),
               ])),
             ]),
           ),
@@ -163,7 +172,7 @@ class _MyBody extends StatelessWidget {
         else
           Panel(child: Column(children: [
             for (var i = 0; i < data.recent.length; i++) ...[
-              if (i > 0) const Divider(height: 1, color: AppColors.line, indent: 16, endIndent: 16),
+              if (i > 0) Divider(height: 1, color: context.colors.line, indent: 16, endIndent: 16),
               _HistoryRow(entry: data.recent[i]),
             ],
           ])),
@@ -180,11 +189,11 @@ class _HistoryRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.all(14),
         child: Row(children: [
-          Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.receipt_long_rounded, size: 20, color: AppColors.teal)),
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: context.colors.paper, borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.receipt_long_rounded, size: 20, color: context.colors.teal)),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${entry.entryDate}  ·  ${entry.closingCount} closing', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+            Text('${entry.entryDate}  ·  ${entry.closingCount} closing', style: TextStyle(fontSize: 13, color: context.colors.muted)),
           ])),
           Rupiah(entry.takeHome, size: 16),
         ]),
@@ -205,7 +214,7 @@ class _AdminBody extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 14),
-          child: Text('Halo, $name', style: const TextStyle(color: AppColors.muted, fontSize: 15)),
+          child: Text('Halo, $name', style: TextStyle(color: context.colors.muted, fontSize: 15)),
         ),
         HeroPanel(label: 'Pendapatan hari ini', amount: data.todayIncome, subLabel: 'Bulan ini', subAmount: data.monthIncome),
         const SizedBox(height: 26),
@@ -221,12 +230,12 @@ class _AdminBody extends StatelessWidget {
         else
           Panel(child: Column(children: [
             for (var i = 0; i < data.monthRecap.length; i++) ...[
-              if (i > 0) const Divider(height: 1, color: AppColors.line, indent: 16, endIndent: 16),
+              if (i > 0) Divider(height: 1, color: context.colors.line, indent: 16, endIndent: 16),
               Padding(padding: const EdgeInsets.all(16), child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(data.monthRecap[i].presenterName, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
+                  Text(data.monthRecap[i].presenterName, style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.ink)),
                   const SizedBox(height: 2),
-                  Text('${data.monthRecap[i].entries} closing', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                  Text('${data.monthRecap[i].entries} closing', style: TextStyle(color: context.colors.muted, fontSize: 13)),
                 ])),
                 Rupiah(data.monthRecap[i].total, size: 16),
               ])),
@@ -244,20 +253,20 @@ class _PodiumTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const medals = {1: AppColors.gold, 2: Color(0xFFAFBDC4), 3: Color(0xFFC98A5E)};
+    final medals = {1: context.colors.gold, 2: const Color(0xFFAFBDC4), 3: const Color(0xFFC98A5E)};
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: rank == 1 ? AppColors.gold : AppColors.line)),
+      decoration: BoxDecoration(color: context.colors.card, borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: rank == 1 ? context.colors.gold : context.colors.line)),
       child: Row(children: [
         Container(width: 40, height: 40, alignment: Alignment.center,
           decoration: BoxDecoration(color: medals[rank], borderRadius: BorderRadius.circular(12)),
-          child: Text('$rank', style: display(18, color: AppColors.ink, spacing: 0))),
+          child: Text('$rank', style: display(18, color: context.colors.ink, spacing: 0))),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(row.presenterName, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink, fontSize: 15)),
+          Text(row.presenterName, style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.ink, fontSize: 15)),
           const SizedBox(height: 2),
-          Text('${row.entries} closing', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+          Text('${row.entries} closing', style: TextStyle(color: context.colors.muted, fontSize: 13)),
         ])),
         Rupiah(row.total, size: 17),
       ]),
@@ -274,16 +283,16 @@ class _AdminMenu extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2))),
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: context.colors.line, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 12),
           ListTile(
-            leading: const Icon(Icons.groups_rounded, color: AppColors.teal),
+            leading: Icon(Icons.groups_rounded, color: context.colors.teal),
             title: const Text('Kelola Presenter'),
             subtitle: const Text('Tambah & lihat akun sales'),
             onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const PresentersScreen())); },
           ),
           ListTile(
-            leading: const Icon(Icons.tune_rounded, color: AppColors.teal),
+            leading: Icon(Icons.tune_rounded, color: context.colors.teal),
             title: const Text('Pengaturan Harga'),
             subtitle: const Text('Harga closing, BOP, souvenir, harian'),
             onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())); },
@@ -292,6 +301,81 @@ class _AdminMenu extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ThemePicker extends StatelessWidget {
+  const _ThemePicker();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('Pilih tema', style: display(21)),
+          const SizedBox(height: 14),
+          _ThemeChoice(
+            title: 'Pocket Ledger',
+            subtitle: 'Pastel, garis hitam, lebih playful',
+            colors: const [Color(0xFFD6BFFF), Color(0xFFBFF59A), Color(0xFFFFD88A)],
+            selected: state.themeStyle == AppThemeStyle.pocket,
+            onTap: () async {
+              await state.setTheme(AppThemeStyle.pocket);
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 10),
+          _ThemeChoice(
+            title: 'Teal Ledger',
+            subtitle: 'Tema hijau klasik',
+            colors: const [Color(0xFF0E6B57), Color(0xFF2FD3A5), Color(0xFFF2B33D)],
+            selected: state.themeStyle == AppThemeStyle.ledger,
+            onTap: () async {
+              await state.setTheme(AppThemeStyle.ledger);
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _ThemeChoice extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final List<Color> colors;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ThemeChoice({required this.title, required this.subtitle, required this.colors, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: context.colors.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: selected ? context.colors.ink : context.colors.line, width: selected ? 2 : 1),
+          ),
+          child: Row(children: [
+            Row(children: colors.map((color) => Container(
+              width: 22,
+              height: 38,
+              decoration: BoxDecoration(color: color, border: Border.all(color: Colors.black), borderRadius: BorderRadius.circular(6)),
+            )).toList()),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(subtitle, style: TextStyle(color: context.colors.muted, fontSize: 12)),
+            ])),
+            if (selected) const Icon(Icons.check_circle_rounded),
+          ]),
+        ),
+      );
 }
 
 class _ErrorView extends StatelessWidget {
@@ -304,9 +388,9 @@ class _ErrorView extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 120),
-          const Icon(Icons.cloud_off_rounded, size: 44, color: AppColors.muted),
+          Icon(Icons.cloud_off_rounded, size: 44, color: context.colors.muted),
           const SizedBox(height: 12),
-          Center(child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted))),
+          Center(child: Text(message, textAlign: TextAlign.center, style: TextStyle(color: context.colors.muted))),
           const SizedBox(height: 16),
           Center(child: OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi'))),
         ],

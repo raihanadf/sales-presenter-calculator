@@ -97,7 +97,7 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_settings == null) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.teal)));
+    if (_settings == null) return Scaffold(body: Center(child: CircularProgressIndicator(color: context.colors.teal)));
     return Scaffold(
       appBar: AppBar(title: const Text('Catat Closing')),
       body: ListView(
@@ -168,41 +168,46 @@ class _ReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = preview;
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(kRadius + 4),
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.teal, AppColors.tealDark]),
-        boxShadow: [BoxShadow(color: AppColors.tealDark.withValues(alpha: 0.3), blurRadius: 22, offset: const Offset(0, 10))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('PERHITUNGAN', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+    final colors = context.colors;
+    final foreground = colors.outlined ? colors.ink : Colors.white;
+    final muted = colors.outlined ? colors.muted : Colors.white70;
+    return Transform.rotate(
+      angle: colors.outlined ? 0.01 : 0,
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: colors.outlined
+            ? panelDecoration(context, color: colors.gold, radius: kRadius + 4)
+            : BoxDecoration(
+                borderRadius: BorderRadius.circular(kRadius + 4),
+                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [colors.teal, colors.tealDark]),
+                boxShadow: [BoxShadow(color: colors.tealDark.withValues(alpha: 0.3), blurRadius: 22, offset: const Offset(0, 10))],
+              ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('PERHITUNGAN', style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
           const SizedBox(height: 16),
           if (p == null)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Isi angka closing untuk lihat perkiraan.', style: TextStyle(color: Colors.white70)))
+            Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text('Isi angka closing untuk lihat perkiraan.', style: TextStyle(color: muted)))
           else ...[
-            _row('Closing', p.closingTotal, false),
-            _row('BOP (${settings.bopPercent}%)', p.bopValue, true),
-            _row('Souvenir (${settings.souvenirPercent}%)', p.souvenirValue, true),
-            _row('Potongan harian', harian, true),
-            const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: DashedLine(color: Colors.white30)),
+            _row('Closing', p.closingTotal, false, foreground, muted),
+            _row('BOP (${settings.bopPercent}%)', p.bopValue, true, foreground, muted),
+            _row('Souvenir (${settings.souvenirPercent}%)', p.souvenirValue, true, foreground, muted),
+            _row('Potongan harian', harian, true, foreground, muted),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: DashedLine(color: foreground.withValues(alpha: 0.45))),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.end, children: [
-              const Text('Diterima presenter', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-              Rupiah(p.takeHome, size: 30, color: AppColors.mint),
+              Text('Diterima presenter', style: TextStyle(color: foreground, fontSize: 14, fontWeight: FontWeight.w700)),
+              Rupiah(p.takeHome, size: 30, color: colors.outlined ? colors.ink : colors.mint),
             ]),
           ],
-        ],
+        ]),
       ),
     );
   }
 
-  Widget _row(String label, int value, bool minus) => Padding(
+  Widget _row(String label, int value, bool minus, Color foreground, Color muted) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-          Text('${minus ? '− ' : ''}${rupiah(value)}', style: display(15, weight: FontWeight.w600, color: Colors.white, spacing: 0)),
+          Text(label, style: TextStyle(color: muted, fontSize: 14)),
+          Text('${minus ? '− ' : ''}${rupiah(value)}', style: display(15, weight: FontWeight.w600, color: foreground, spacing: 0)),
         ]),
       );
 }

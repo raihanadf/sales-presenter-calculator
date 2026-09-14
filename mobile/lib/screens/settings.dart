@@ -82,17 +82,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pengaturan Harga')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.teal))
+          ? Center(child: CircularProgressIndicator(color: context.colors.teal))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
                 Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: AppColors.gold.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(kRadiusSm)),
-                  child: const Row(children: [
-                    Icon(Icons.info_outline_rounded, size: 18, color: AppColors.ink),
-                    SizedBox(width: 10),
-                    Expanded(child: Text('Nilai ini dipakai untuk closing baru. Closing yang sudah tercatat tidak berubah.', style: TextStyle(fontSize: 13, color: AppColors.ink))),
+                  decoration: BoxDecoration(color: context.colors.gold.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(kRadiusSm)),
+                  child: Row(children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: context.colors.ink),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text('Nilai ini dipakai untuk closing baru. Closing yang sudah tercatat tidak berubah.', style: TextStyle(fontSize: 13, color: context.colors.ink))),
                   ]),
                 ),
                 const SizedBox(height: 18),
@@ -110,9 +110,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (_saved) ...[
                   const SizedBox(height: 12),
                   Row(children: [
-                    const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.teal),
+                    Icon(Icons.check_circle_rounded, size: 18, color: context.colors.teal),
                     const SizedBox(width: 8),
-                    Text('Tersimpan', style: display(14, weight: FontWeight.w600, color: AppColors.teal, spacing: 0)),
+                    Text('Tersimpan', style: display(14, weight: FontWeight.w600, color: context.colors.teal, spacing: 0)),
                   ]),
                 ],
                 const SizedBox(height: 20),

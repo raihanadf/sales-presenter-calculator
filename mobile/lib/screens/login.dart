@@ -41,74 +41,76 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final outlined = colors.outlined;
+    final headerText = outlined ? colors.ink : Colors.white;
     return Scaffold(
-      body: Column(
-        children: [
-          // deep-teal brand header with the logo mark.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 90, 24, 44),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.teal, AppColors.tealDark]),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
-            ),
-            child: Column(
-              children: [
-                ClipRRect(borderRadius: BorderRadius.circular(22), child: Image.asset('assets/logo.png', width: 76, height: 76)),
-                const SizedBox(height: 18),
-                Text('Sales Calculator', style: display(26, color: Colors.white)),
-                const SizedBox(height: 6),
-                const Text('Catat closing, lihat pendapatanmu', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Masuk', style: display(20)),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _username,
-                    decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline_rounded)),
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _password,
-                    obscureText: _obscure,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    onSubmitted: (_) => _submit(),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 14),
-                    Row(children: [
-                      const Icon(Icons.error_outline_rounded, size: 18, color: Colors.redAccent),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
-                    ]),
-                  ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Masuk'),
-                  ),
-                ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
+              decoration: BoxDecoration(
+                color: outlined ? colors.teal : null,
+                gradient: outlined ? null : LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [colors.teal, colors.tealDark]),
+                borderRadius: BorderRadius.circular(30),
+                border: outlined ? Border.all(color: colors.ink, width: 1.5) : null,
+                boxShadow: outlined ? [BoxShadow(color: colors.ink, offset: const Offset(4, 5))] : null,
               ),
+              child: Column(children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: colors.ink, width: outlined ? 1.5 : 0)),
+                  child: ClipOval(child: Image.asset('assets/logo.png', width: 68, height: 68)),
+                ),
+                const SizedBox(height: 18),
+                Text('Sales Calculator', style: display(27, color: headerText)),
+                const SizedBox(height: 7),
+                Text('Closing masuk, angka langsung beres.', style: TextStyle(color: outlined ? colors.muted : Colors.white70, fontSize: 14)),
+              ]),
             ),
-          ),
-        ],
+            const SizedBox(height: 38),
+            Text('Selamat datang!', style: display(30, weight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text('Masuk untuk catat hasil hari ini.', style: TextStyle(color: colors.muted)),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _username,
+              decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline_rounded)),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _password,
+              obscureText: _obscure,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              Row(children: [
+                const Icon(Icons.error_outline_rounded, size: 18, color: Colors.redAccent),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
+              ]),
+            ],
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _loading ? null : _submit,
+              child: _loading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Masuk'),
+            ),
+          ]),
+        ),
       ),
     );
   }

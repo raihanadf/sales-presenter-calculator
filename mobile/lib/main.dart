@@ -19,10 +19,11 @@ class SalesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = context.watch<AppState>().themeStyle;
     return MaterialApp(
       title: 'Sales Calculator',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
+      theme: buildTheme(style),
       home: const _Gate(),
     );
   }
