@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="224" fill="#1B5E4F"/>
+  <rect x="248" y="196" width="360" height="632" rx="56" fill="#FFFFFF"/>
+  <rect x="304" y="260" width="248" height="104" rx="20" fill="#0E3D32"/>
+  <!-- rising trend line inside the screen -->
+  <path d="M328 336 L388 300 L448 316 L528 276" stroke="#3DD6B0" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="528" cy="276" r="14" fill="#3DD6B0"/>
+  <!-- keypad -->
+  <g fill="#1B5E4F">
+    <rect x="304" y="412" width="64" height="64" rx="16"/>
+    <rect x="396" y="412" width="64" height="64" rx="16"/>
+    <rect x="488" y="412" width="64" height="64" rx="16"/>
+    <rect x="304" y="504" width="64" height="64" rx="16"/>
+    <rect x="396" y="504" width="64" height="64" rx="16"/>
+    <rect x="488" y="504" width="64" height="64" rx="16"/>
+    <rect x="304" y="596" width="64" height="64" rx="16"/>
+    <rect x="396" y="596" width="64" height="64" rx="16"/>
+    <rect x="488" y="596" width="64" height="64" rx="16"/>
+  </g>
+  <!-- equals / total bar -->
+  <rect x="304" y="688" width="248" height="72" rx="20" fill="#3DD6B0"/>
+  <!-- ascending bars, the "sales growth" motif -->
+  <g fill="#3DD6B0">
+    <rect x="648" y="620" width="72" height="208" rx="20"/>
+    <rect x="736" y="520" width="72" height="308" rx="20"/>
+  </g>
+  <rect x="648" y="420" width="160" height="72" rx="24" fill="#FFFFFF"/>
+  <path d="M672 456 L720 456" stroke="#1B5E4F" stroke-width="16" stroke-linecap="round"/>
+</svg>
