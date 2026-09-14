@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
-import '../util/format.dart';
+import '../theme.dart';
+import '../widgets.dart';
 import 'entry_form.dart';
 import 'presenters.dart';
 import 'settings.dart';
+import '../util/format.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,59 +38,57 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openEntry() async {
-    final saved = await Navigator.of(context)
-        .push<bool>(MaterialPageRoute(builder: (_) => const EntryFormScreen()));
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const EntryFormScreen()));
     if (saved == true) _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final name = state.user?.name ?? '';
+    final name = context.watch<AppState>().user?.name ?? '';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        titleSpacing: 20,
+        title: Row(children: [
+          ClipRRect(borderRadius: BorderRadius.circular(9), child: Image.asset('assets/logo.png', width: 30, height: 30)),
+          const SizedBox(width: 10),
+          const Text('Beranda'),
+        ]),
         actions: [
           if (_isAdmin)
-            PopupMenuButton<String>(
-              onSelected: (v) async {
-                final page = v == 'presenters' ? const PresentersScreen() : const SettingsScreen();
-                await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+            IconButton(
+              tooltip: 'Kelola',
+              icon: const Icon(Icons.tune_rounded),
+              onPressed: () async {
+                await showModalBottomSheet(context: context, backgroundColor: AppColors.card, builder: (_) => const _AdminMenu());
                 _refresh();
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'presenters', child: Text('Kelola Presenter')),
-                PopupMenuItem(value: 'settings', child: Text('Pengaturan Harga')),
-              ],
             ),
-          IconButton(
-            tooltip: 'Keluar',
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AppState>().logout(),
-          ),
+          IconButton(tooltip: 'Keluar', icon: const Icon(Icons.logout_rounded), onPressed: () => context.read<AppState>().logout()),
+          const SizedBox(width: 6),
         ],
       ),
       floatingActionButton: _isAdmin
           ? null
           : FloatingActionButton.extended(
               onPressed: _openEntry,
-              icon: const Icon(Icons.add),
-              label: const Text('Closing'),
+              backgroundColor: AppColors.mint,
+              foregroundColor: AppColors.ink,
+              icon: const Icon(Icons.add_rounded),
+              label: Text('Catat Closing', style: display(15, weight: FontWeight.w700, color: AppColors.ink, spacing: 0)),
             ),
       body: RefreshIndicator(
+        color: AppColors.teal,
         onRefresh: _refresh,
         child: FutureBuilder<Object>(
           future: _future,
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator(color: AppColors.teal));
             }
-            if (snap.hasError) {
-              return _ErrorView(message: '${snap.error}', onRetry: _refresh);
-            }
+            if (snap.hasError) return _ErrorView(message: '${snap.error}', onRetry: _refresh);
             final data = snap.data!;
-            if (data is MyDashboard) return _MyDashboardBody(data: data, greeting: name);
-            return _DashboardBody(data: data as Dashboard, greeting: name);
+            if (data is MyDashboard) return _MyBody(data: data, name: name);
+            return _AdminBody(data: data as Dashboard, name: name);
           },
         ),
       ),
@@ -96,218 +96,133 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _DashboardBody extends StatelessWidget {
-  final Dashboard data;
-  final String greeting;
-  const _DashboardBody({required this.data, required this.greeting});
+// ---------------- presenter ----------------
+
+class _MyBody extends StatelessWidget {
+  final MyDashboard data;
+  final String name;
+  const _MyBody({required this.data, required this.name});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
       children: [
-        Text('Halo, $greeting', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 14),
+          child: Text('Halo, $name', style: const TextStyle(color: AppColors.muted, fontSize: 15)),
+        ),
+        HeroPanel(
+          label: 'Pendapatan hari ini',
+          amount: data.todayIncome,
+          subLabel: 'Bulan ini',
+          subAmount: data.monthIncome,
+          trailing: data.rank != null ? RankPill(rank: data.rank!, total: data.totalPresenters) : null,
+        ),
+        const SizedBox(height: 14),
         Row(children: [
-          Expanded(child: _StatCard(label: 'Pendapatan Hari Ini', value: rupiah(data.todayIncome), icon: Icons.today, tone: true)),
+          Expanded(child: StatTile(icon: Icons.check_circle_outline_rounded, label: 'Closing bulan ini', value: Text('${data.monthClosings}', style: display(22)))),
           const SizedBox(width: 12),
-          Expanded(child: _StatCard(label: 'Bulan Ini', value: rupiah(data.monthIncome), icon: Icons.calendar_month)),
+          Expanded(child: StatTile(icon: Icons.trending_up_rounded, label: 'Rata-rata / closing', value: Rupiah(data.avgPerClosing, size: 18))),
         ]),
-        const SizedBox(height: 24),
-        Text('Top 3 Presenter', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 26),
+        const SectionTitle('Closing terbaik'),
+        if (data.bestTakeHome == 0)
+          const EmptyNote('Belum ada closing bulan ini')
+        else
+          Panel(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.gold.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.star_rounded, color: AppColors.gold)),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Rupiah(data.bestTakeHome, size: 20),
+                const SizedBox(height: 2),
+                Text(data.bestDate ?? '', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+              ])),
+            ]),
+          ),
+        const SizedBox(height: 26),
+        const SectionTitle('Tren 7 hari'),
+        Panel(padding: const EdgeInsets.fromLTRB(12, 16, 12, 12), child: TrendBars(points: data.trend.map((t) => (date: t.date, income: t.income)).toList())),
+        const SizedBox(height: 26),
+        const SectionTitle('Riwayat closing'),
+        if (data.recent.isEmpty)
+          const EmptyNote('Belum ada closing')
+        else
+          Panel(child: Column(children: [
+            for (var i = 0; i < data.recent.length; i++) ...[
+              if (i > 0) const Divider(height: 1, color: AppColors.line, indent: 16, endIndent: 16),
+              _HistoryRow(entry: data.recent[i]),
+            ],
+          ])),
+      ],
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final RecentEntry entry;
+  const _HistoryRow({required this.entry});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.paper, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.receipt_long_rounded, size: 20, color: AppColors.teal)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${entry.entryDate}  ·  ${entry.closingCount} closing', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          ])),
+          Rupiah(entry.takeHome, size: 16),
+        ]),
+      );
+}
+
+// ---------------- admin ----------------
+
+class _AdminBody extends StatelessWidget {
+  final Dashboard data;
+  final String name;
+  const _AdminBody({required this.data, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 14),
+          child: Text('Halo, $name', style: const TextStyle(color: AppColors.muted, fontSize: 15)),
+        ),
+        HeroPanel(label: 'Pendapatan hari ini', amount: data.todayIncome, subLabel: 'Bulan ini', subAmount: data.monthIncome),
+        const SizedBox(height: 26),
+        const SectionTitle('Peringkat presenter'),
         if (data.top3.isEmpty)
-          const _Empty('Belum ada closing bulan ini')
+          const EmptyNote('Belum ada closing bulan ini')
         else
           ...data.top3.asMap().entries.map((e) => _PodiumTile(rank: e.key + 1, row: e.value)),
-        const SizedBox(height: 24),
-        Text('Rekap Bulan Ini', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 26),
+        const SectionTitle('Rekap bulan ini'),
         if (data.monthRecap.isEmpty)
-          const _Empty('Belum ada data')
+          const EmptyNote('Belum ada data')
         else
-          Card(
-            child: Column(
-              children: data.monthRecap
-                  .map((r) => ListTile(
-                        title: Text(r.presenterName),
-                        subtitle: Text('${r.entries} closing'),
-                        trailing: Text(rupiah(r.total), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ))
-                  .toList(),
-            ),
-          ),
+          Panel(child: Column(children: [
+            for (var i = 0; i < data.monthRecap.length; i++) ...[
+              if (i > 0) const Divider(height: 1, color: AppColors.line, indent: 16, endIndent: 16),
+              Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(data.monthRecap[i].presenterName, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
+                  const SizedBox(height: 2),
+                  Text('${data.monthRecap[i].entries} closing', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                ])),
+                Rupiah(data.monthRecap[i].total, size: 16),
+              ])),
+            ],
+          ])),
       ],
-    );
-  }
-}
-
-class _MyDashboardBody extends StatelessWidget {
-  final MyDashboard data;
-  final String greeting;
-  const _MyDashboardBody({required this.data, required this.greeting});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(child: Text('Halo, $greeting', style: theme.textTheme.titleMedium)),
-            if (data.rank != null) _RankChip(rank: data.rank!, total: data.totalPresenters),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _StatCard(label: 'Pendapatan Hari Ini', value: rupiah(data.todayIncome), icon: Icons.today, tone: true)),
-          const SizedBox(width: 12),
-          Expanded(child: _StatCard(label: 'Bulan Ini', value: rupiah(data.monthIncome), icon: Icons.calendar_month)),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _StatCard(label: 'Closing Bulan Ini', value: '${data.monthClosings}', icon: Icons.check_circle_outline)),
-          const SizedBox(width: 12),
-          Expanded(child: _StatCard(label: 'Rata-rata / Closing', value: rupiah(data.avgPerClosing), icon: Icons.trending_up)),
-        ]),
-        const SizedBox(height: 24),
-        Text('Closing Terbaik', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (data.bestTakeHome == 0)
-          const _Empty('Belum ada closing')
-        else
-          Card(
-            child: ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFFFC107), child: Icon(Icons.star, color: Colors.white)),
-              title: Text(rupiah(data.bestTakeHome), style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(data.bestDate ?? ''),
-            ),
-          ),
-        const SizedBox(height: 24),
-        Text('Tren 7 Hari', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: _TrendBars(points: data.trend))),
-        const SizedBox(height: 24),
-        Text('Riwayat Closing', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        if (data.recent.isEmpty)
-          const _Empty('Belum ada closing')
-        else
-          Card(
-            child: Column(
-              children: data.recent
-                  .map((e) => ListTile(
-                        leading: const Icon(Icons.receipt_long),
-                        title: Text(rupiah(e.takeHome), style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${e.entryDate} • ${e.closingCount} closing'),
-                      ))
-                  .toList(),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _RankChip extends StatelessWidget {
-  final int rank;
-  final int total;
-  const _RankChip({required this.rank, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.emoji_events, size: 16, color: scheme.onPrimaryContainer),
-        const SizedBox(width: 4),
-        Text('Peringkat #$rank / $total', style: TextStyle(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600, fontSize: 12)),
-      ]),
-    );
-  }
-}
-
-// lightweight 7-bar chart, no chart package. bars scale to the max day.
-class _TrendBars extends StatelessWidget {
-  final List<TrendPoint> points;
-  const _TrendBars({required this.points});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final max = points.fold<int>(0, (m, p) => p.income > m ? p.income : m);
-    return SizedBox(
-      height: 130,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: points.map((p) {
-          final ratio = max == 0 ? 0.0 : p.income / max;
-          return Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (p.income > 0)
-                  Text(_short(p.income), style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 2),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8 + ratio * 80,
-                  decoration: BoxDecoration(
-                    color: p.income > 0 ? scheme.primary : scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(p.date.substring(8), style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // compact rupiah for tiny bar labels, e.g. 548000 -> "548k", 1200000 -> "1.2jt".
-  String _short(int v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}jt';
-    if (v >= 1000) return '${(v / 1000).round()}k';
-    return '$v';
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool tone;
-  const _StatCard({required this.label, required this.value, required this.icon, this.tone = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final bg = tone ? scheme.primary : Colors.white;
-    final fg = tone ? scheme.onPrimary : scheme.onSurface;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: fg.withValues(alpha: 0.8), size: 20),
-          const SizedBox(height: 10),
-          Text(value, style: TextStyle(color: fg, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: fg.withValues(alpha: 0.75), fontSize: 12)),
-        ],
-      ),
     );
   }
 }
@@ -319,44 +234,70 @@ class _PodiumTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const medals = {1: Color(0xFFFFC107), 2: Color(0xFFB0BEC5), 3: Color(0xFFBCAAA4)};
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: medals[rank],
-          child: Text('$rank', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        ),
-        title: Text(row.presenterName, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${row.entries} closing'),
-        trailing: Text(rupiah(row.total), style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
+    const medals = {1: AppColors.gold, 2: Color(0xFFAFBDC4), 3: Color(0xFFC98A5E)};
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(kRadius), border: Border.all(color: rank == 1 ? AppColors.gold : AppColors.line)),
+      child: Row(children: [
+        Container(width: 40, height: 40, alignment: Alignment.center,
+          decoration: BoxDecoration(color: medals[rank], borderRadius: BorderRadius.circular(12)),
+          child: Text('$rank', style: display(18, color: AppColors.ink, spacing: 0))),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(row.presenterName, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink, fontSize: 15)),
+          const SizedBox(height: 2),
+          Text('${row.entries} closing', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+        ])),
+        Rupiah(row.total, size: 17),
+      ]),
     );
   }
 }
 
-class _Empty extends StatelessWidget {
-  final String text;
-  const _Empty(this.text);
+class _AdminMenu extends StatelessWidget {
+  const _AdminMenu();
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      );
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.groups_rounded, color: AppColors.teal),
+            title: const Text('Kelola Presenter'),
+            subtitle: const Text('Tambah & lihat akun sales'),
+            onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const PresentersScreen())); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune_rounded, color: AppColors.teal),
+            title: const Text('Pengaturan Harga'),
+            subtitle: const Text('Harga closing, BOP, souvenir, harian'),
+            onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())); },
+          ),
+        ]),
+      ),
+    );
+  }
 }
 
 class _ErrorView extends StatelessWidget {
   final String message;
   final Future<void> Function() onRetry;
   const _ErrorView({required this.message, required this.onRetry});
+
   @override
   Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 120),
-          Icon(Icons.error_outline, size: 40, color: Theme.of(context).colorScheme.error),
-          const SizedBox(height: 8),
-          Center(child: Text(message, textAlign: TextAlign.center)),
+          const Icon(Icons.cloud_off_rounded, size: 44, color: AppColors.muted),
           const SizedBox(height: 12),
+          Center(child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted))),
+          const SizedBox(height: 16),
           Center(child: OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi'))),
         ],
       );

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'state/app_state.dart';
 import 'screens/login.dart';
 import 'screens/home.dart';
+import 'theme.dart';
 
 void main() {
   runApp(
@@ -18,23 +19,10 @@ class SalesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF1B5E4F),
-      brightness: Brightness.light,
-    );
     return MaterialApp(
       title: 'Sales Calculator',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: scheme,
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF4F6F5),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
+      theme: buildTheme(),
       home: const _Gate(),
     );
   }

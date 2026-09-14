@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../api/models.dart' show Computed, Settings;
 import '../state/app_state.dart';
+import '../theme.dart';
+import '../widgets.dart';
 import '../util/format.dart';
 
 class EntryFormScreen extends StatefulWidget {
@@ -21,13 +23,10 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
 
   DateTime _date = DateTime.now();
   Settings? _settings;
-
   Computed? _preview;
   Timer? _debounce;
   bool _saving = false;
   String? _error;
-
-
 
   @override
   void initState() {
@@ -61,24 +60,22 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
   }
 
   Future<void> _runPreview() async {
-    final api = context.read<AppState>().api;
     try {
-      final c = await api.preview(_int(_closing), _int(_bop), _int(_audience),
-          _harian.text.trim().isEmpty ? null : _int(_harian));
+      final c = await context.read<AppState>().api.preview(_int(_closing), _int(_bop), _int(_audience), _harian.text.trim().isEmpty ? null : _int(_harian));
       if (mounted) setState(() => _preview = c);
     } catch (_) {
-      // keep last good preview; save will surface any real error.
+      // keep last good preview; save surfaces any real error.
     }
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      final api = context.read<AppState>().api;
-      await api.createEntry({
+      await context.read<AppState>().api.createEntry({
         'entryDate': isoDate(_date),
         'closingCount': _int(_closing),
         'bopInput': _int(_bop),
@@ -93,114 +90,122 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     }
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2100));
+    if (picked != null) setState(() => _date = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_settings == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    if (_settings == null) return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.teal)));
     return Scaffold(
-      appBar: AppBar(title: const Text('Input Closing')),
+      appBar: AppBar(title: const Text('Catat Closing')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          InkWell(
-            onTap: _pickDate,
-            child: InputDecorator(
-              decoration: const InputDecoration(labelText: 'Tanggal', prefixIcon: Icon(Icons.event)),
-              child: Text(isoDate(_date)),
-            ),
+          _ReceiptCard(preview: _preview, settings: _settings!, harian: _harian.text.trim().isEmpty ? _settings!.harianDefault : _int(_harian)),
+          const SizedBox(height: 22),
+          const SectionTitle('Rincian closing'),
+          Panel(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(kRadiusSm),
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Tanggal', prefixIcon: Icon(Icons.event_rounded)),
+                  child: Text(isoDate(_date), style: display(15, weight: FontWeight.w600, spacing: 0)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _numField(_closing, 'Jumlah Closing', 'mis. 14', Icons.tag_rounded),
+              _numField(_bop, 'BOP (Rp)', 'mis. 150000', Icons.card_giftcard_rounded),
+              _numField(_audience, 'Jumlah Audience', 'mis. 33', Icons.groups_rounded),
+              _numField(_harian, 'Potongan Harian (Rp)', 'default ${_settings!.harianDefault}', Icons.remove_circle_outline_rounded, last: true),
+            ]),
           ),
-          const SizedBox(height: 14),
-          _numField(_closing, 'Jumlah Closing', 'mis. 14'),
-          _numField(_bop, 'BOP (Rp)', 'mis. 150000'),
-          _numField(_audience, 'Jumlah Audience', 'mis. 33'),
-          _numField(_harian, 'Potongan Harian (Rp)', 'default ${_settings!.harianDefault}'),
-          const SizedBox(height: 8),
-          _PreviewCard(preview: _preview, settings: _settings!),
           if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: 14),
+            Row(children: [
+              const Icon(Icons.error_outline_rounded, size: 18, color: Colors.redAccent),
+              const SizedBox(width: 8),
+              Expanded(child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
+            ]),
           ],
-          const SizedBox(height: 20),
-          FilledButton(
+          const SizedBox(height: 22),
+          FilledButton.icon(
             onPressed: _saving ? null : _save,
-            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _saving
+            icon: _saving ? const SizedBox.shrink() : const Icon(Icons.check_rounded),
+            label: _saving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Simpan'),
+                : const Text('Simpan Closing'),
           ),
         ],
       ),
     );
   }
 
-  Widget _numField(TextEditingController c, String label, String hint) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
+  Widget _numField(TextEditingController c, String label, String hint, IconData icon, {bool last = false}) => Padding(
+        padding: EdgeInsets.only(bottom: last ? 0 : 14),
         child: TextField(
           controller: c,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(labelText: label, hintText: hint),
+          decoration: InputDecoration(labelText: label, hintText: hint, prefixIcon: Icon(icon)),
+          style: display(15, weight: FontWeight.w600, spacing: 0),
           onChanged: (_) => _schedulePreview(),
         ),
       );
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) setState(() => _date = picked);
-  }
 }
 
-// avoids pulling intl into this file just for one format call.
-String isoDate(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-class _PreviewCard extends StatelessWidget {
+// receipt: deep-teal panel with the take-home as the mint hero total.
+class _ReceiptCard extends StatelessWidget {
   final Computed? preview;
   final Settings settings;
-  const _PreviewCard({required this.preview, required this.settings});
+  final int harian;
+  const _ReceiptCard({required this.preview, required this.settings, required this.harian});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final p = preview;
-    return Card(
-      color: scheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Perhitungan', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (p == null)
-              Text('Isi angka untuk melihat perkiraan.', style: TextStyle(color: scheme.onSurfaceVariant))
-            else ...[
-              _row('Closing', rupiah(p.closingTotal)),
-              _row('BOP (${settings.bopPercent}%)', '- ${rupiah(p.bopValue)}'),
-              _row('Souvenir (${settings.souvenirPercent}%)', '- ${rupiah(p.souvenirValue)}'),
-              const Divider(),
-              _row('Diterima Presenter', rupiah(p.takeHome), bold: true),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(kRadius + 4),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.teal, AppColors.tealDark]),
+        boxShadow: [BoxShadow(color: AppColors.tealDark.withValues(alpha: 0.3), blurRadius: 22, offset: const Offset(0, 10))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('PERHITUNGAN', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+          const SizedBox(height: 16),
+          if (p == null)
+            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Isi angka closing untuk lihat perkiraan.', style: TextStyle(color: Colors.white70)))
+          else ...[
+            _row('Closing', p.closingTotal, false),
+            _row('BOP (${settings.bopPercent}%)', p.bopValue, true),
+            _row('Souvenir (${settings.souvenirPercent}%)', p.souvenirValue, true),
+            _row('Potongan harian', harian, true),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: DashedLine(color: Colors.white30)),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.end, children: [
+              const Text('Diterima presenter', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              Rupiah(p.takeHome, size: 30, color: AppColors.mint),
+            ]),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _row(String label, String value, {bool bold = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: bold ? 16 : 14)),
-            Text(value, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.w500, fontSize: bold ? 16 : 14)),
-          ],
-        ),
+  Widget _row(String label, int value, bool minus) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          Text('${minus ? '− ' : ''}${rupiah(value)}', style: display(15, weight: FontWeight.w600, color: Colors.white, spacing: 0)),
+        ]),
       );
 }
+
+// yyyy-mm-dd without pulling intl into this screen.
+String isoDate(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
+import '../theme.dart';
+import '../widgets.dart';
 
 class PresentersScreen extends StatefulWidget {
   const PresentersScreen({super.key});
@@ -24,11 +26,7 @@ class _PresentersScreenState extends State<PresentersScreen> {
   }
 
   Future<void> _add() async {
-    final created = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _AddPresenterSheet(),
-    );
+    final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, backgroundColor: AppColors.card, builder: (_) => const _AddPresenterSheet());
     if (created == true) setState(_reload);
   }
 
@@ -38,28 +36,35 @@ class _PresentersScreenState extends State<PresentersScreen> {
       appBar: AppBar(title: const Text('Presenter')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _add,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Tambah'),
+        backgroundColor: AppColors.mint,
+        foregroundColor: AppColors.ink,
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: Text('Tambah', style: display(15, weight: FontWeight.w700, color: AppColors.ink, spacing: 0)),
       ),
       body: FutureBuilder<List<AppUser>>(
         future: _future,
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) return Center(child: Text('${snap.error}'));
+          if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.teal));
+          if (snap.hasError) return Center(child: Text('${snap.error}', style: const TextStyle(color: AppColors.muted)));
           final list = snap.data!;
-          if (list.isEmpty) return const Center(child: Text('Belum ada presenter'));
+          if (list.isEmpty) return const Center(child: EmptyNote('Belum ada presenter. Tambah lewat tombol di bawah.'));
           return ListView.separated(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
             itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (_, i) => Card(
-              child: ListTile(
-                leading: CircleAvatar(child: Text(list[i].name.isNotEmpty ? list[i].name[0].toUpperCase() : '?')),
-                title: Text(list[i].name),
-                subtitle: Text('@${list[i].username}'),
-              ),
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) => Panel(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Container(width: 44, height: 44, alignment: Alignment.center,
+                  decoration: BoxDecoration(color: AppColors.teal.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                  child: Text(list[i].name.isNotEmpty ? list[i].name[0].toUpperCase() : '?', style: display(18, color: AppColors.teal, spacing: 0))),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(list[i].name, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text('@${list[i].username}', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                ])),
+              ]),
             ),
           );
         },
@@ -96,8 +101,7 @@ class _AddPresenterSheetState extends State<_AddPresenterSheet> {
       _error = null;
     });
     try {
-      await context.read<AppState>().api.createPresenter(
-            _name.text.trim(), _username.text.trim(), _password.text);
+      await context.read<AppState>().api.createPresenter(_name.text.trim(), _username.text.trim(), _password.text);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -109,35 +113,27 @@ class _AddPresenterSheetState extends State<_AddPresenterSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16, right: 16, top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Presenter Baru', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nama')),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 14, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(2)))),
+        const SizedBox(height: 18),
+        Text('Presenter baru', style: display(20)),
+        const SizedBox(height: 18),
+        TextField(controller: _name, decoration: const InputDecoration(labelText: 'Nama', prefixIcon: Icon(Icons.badge_outlined))),
+        const SizedBox(height: 12),
+        TextField(controller: _username, decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.alternate_email_rounded))),
+        const SizedBox(height: 12),
+        TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (min 6)', prefixIcon: Icon(Icons.lock_outline_rounded))),
+        if (_error != null) ...[
           const SizedBox(height: 12),
-          TextField(controller: _username, decoration: const InputDecoration(labelText: 'Username')),
-          const SizedBox(height: 12),
-          TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (min 6)')),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ],
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: _saving ? null : _submit,
-            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-            child: _saving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Simpan'),
-          ),
+          Text(_error!, style: const TextStyle(color: Colors.redAccent)),
         ],
-      ),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Simpan'),
+        ),
+      ]),
     );
   }
 }
