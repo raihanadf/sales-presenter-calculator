@@ -14,5 +14,5 @@ enabled = true
 binding = "DB"
 database_name = "sales_presenter"
 # replace after: `wrangler d1 create sales_presenter`
-database_id = "REPLACE_WITH_REMOTE_D1_ID"
+database_id = "ede9974a-2c39-4aa9-bb4b-f5d9ab350bac"
 migrations_dir = "migrations"
