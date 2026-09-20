@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
-import '../widgets.dart';
 import '../anim.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -94,14 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ])),
-            const SizedBox(height: 26),
-            // whose app this is. single tenant for now, so it is fixed here.
-            const Reveal(
-                delayMs: 60,
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OrgMark(height: 64))),
-            const SizedBox(height: 30),
+            const SizedBox(height: 44),
             Reveal(
                 delayMs: 90,
                 child: Text('Selamat\ndatang!',

@@ -232,28 +232,20 @@ class _MyBody extends StatelessWidget {
         Reveal(
           child: Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Halo, $name',
-                          style: TextStyle(
-                              color: context.colors.muted, fontSize: 15)),
-                      if (data.branchName != null) ...[
-                        const SizedBox(height: 3),
-                        Text(data.branchName!,
-                            style: TextStyle(
-                                color: context.colors.ink,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700)),
-                      ],
-                    ],
-                  ),
-                ),
-                const OrgMark(height: 28),
+                Text('Halo, $name',
+                    style:
+                        TextStyle(color: context.colors.muted, fontSize: 15)),
+                if (data.branchName != null) ...[
+                  const SizedBox(height: 3),
+                  Text(data.branchName!,
+                      style: TextStyle(
+                          color: context.colors.ink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                ],
               ],
             ),
           ),
@@ -449,28 +441,20 @@ class _AdminBody extends StatelessWidget {
         Reveal(
           child: Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Halo, $name',
-                          style: TextStyle(
-                              color: context.colors.muted, fontSize: 15)),
-                      if (!user.isSuperadmin && user.branchName != null) ...[
-                        const SizedBox(height: 3),
-                        Text(user.branchName!,
-                            style: TextStyle(
-                                color: context.colors.ink,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700)),
-                      ],
-                    ],
-                  ),
-                ),
-                const OrgMark(height: 28),
+                Text('Halo, $name',
+                    style:
+                        TextStyle(color: context.colors.muted, fontSize: 15)),
+                if (!user.isSuperadmin && user.branchName != null) ...[
+                  const SizedBox(height: 3),
+                  Text(user.branchName!,
+                      style: TextStyle(
+                          color: context.colors.ink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                ],
               ],
             ),
           ),
