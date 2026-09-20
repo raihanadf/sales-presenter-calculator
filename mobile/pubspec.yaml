@@ -1,7 +1,7 @@
 name: sales_presenter
 description: Sales presenter calculator app.
 publish_to: "none"
-version: 1.2.1+13
+version: 2.0.0+14
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
