@@ -1,5 +1,4 @@
 import { sign, verify } from "hono/jwt";
-import type { AuthUser } from "../types";
 
 // password hashing with pbkdf2 via web crypto (no native bcrypt on workers).
 // stored format: pbkdf2$<iterations>$<saltB64>$<hashB64>
@@ -29,6 +28,15 @@ function unb64(s: string): Uint8Array {
   return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 }
 
+const PASSWORD_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
+
+// readable random password, shown to the superadmin once and never stored in
+// clear text. used for a new branch admin and for a password reset.
+export function randomPassword(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes, (b) => PASSWORD_ALPHABET[b % PASSWORD_ALPHABET.length]).join("");
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const hash = await pbkdf2(password, salt);
@@ -47,21 +55,21 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return diff === 0;
 }
 
-export async function issueToken(user: AuthUser, secret: string): Promise<string> {
+export async function issueToken(user: { id: number; username: string }, secret: string): Promise<string> {
+  // the token only proves identity. role and branch are read from the db on
+  // every request so a move or a role change applies immediately.
   const payload = {
     sub: user.id,
     username: user.username,
-    role: user.role,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
   };
   return sign(payload, secret, "HS256");
 }
 
-export async function readToken(token: string, secret: string): Promise<AuthUser> {
+export async function readToken(token: string, secret: string): Promise<{ id: number; username: string }> {
   const payload = await verify(token, secret, "HS256");
   return {
     id: payload.sub as number,
     username: payload.username as string,
-    role: payload.role as "admin" | "presenter",
   };
 }

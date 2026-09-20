@@ -23,7 +23,25 @@ class ApiClient {
 
   String? _token;
 
+  // the branch every scoped request is read through. a branch admin and a
+  // presenter always use their own; the superadmin switches it to drill into a
+  // branch, or leaves it null to span all of them.
+  int? activeBranchId;
+
+  // this build's version, sent on every request so the server can refuse
+  // writes from an app that is too old to be trusted with new data.
+  String? appVersion;
+
+  // called when the server answers 426: this build may no longer write.
+  void Function()? onUpdateRequired;
+
   String? get token => _token;
+
+  // appends the active branch to a query, when there is one to append.
+  Map<String, String> _scoped(Map<String, String> query) => {
+        ...query,
+        if (activeBranchId != null) 'branchId': '$activeBranchId',
+      };
 
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,6 +61,7 @@ class ApiClient {
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
+        if (appVersion != null) 'X-App-Version': appVersion!,
       };
 
   Future<dynamic> _decode(http.Response r) async {
@@ -51,6 +70,7 @@ class ApiClient {
     final msg = body is Map && body['error'] != null
         ? body['error'].toString()
         : 'request failed (${r.statusCode})';
+    if (r.statusCode == 426) onUpdateRequired?.call();
     throw ApiException(r.statusCode, msg);
   }
 
@@ -62,7 +82,9 @@ class ApiClient {
     await _saveToken(body['token']);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user', jsonEncode(body['user']));
-    return AppUser.fromJson(body['user']);
+    final user = AppUser.fromJson(body['user']);
+    activeBranchId = user.branchId;
+    return user;
   }
 
   // restores the persisted user for a still-valid token on app boot.
@@ -70,7 +92,22 @@ class ApiClient {
     if (_token == null) return null;
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('user');
-    return raw == null ? null : AppUser.fromJson(jsonDecode(raw));
+    if (raw == null) return null;
+    final user = AppUser.fromJson(jsonDecode(raw));
+    activeBranchId = user.branchId;
+    return user;
+  }
+
+  // re-reads the account from the server so a role change or a branch move
+  // shows up without logging out, and refreshes the cached copy.
+  Future<AppUser> me() async {
+    final r = await http.get(Uri.parse('$baseUrl/api/me'), headers: _headers);
+    final body = await _decode(r);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(body['user']));
+    final user = AppUser.fromJson(body['user']);
+    activeBranchId = user.branchId;
+    return user;
   }
 
   Future<void> logout() async {
@@ -82,8 +119,57 @@ class ApiClient {
   // dashboards cache their last good payload so an offline reload shows the
   // last-known figures instead of a network error.
   Future<Dashboard> dashboard(String date, String month) async {
+    final branch = activeBranchId == null ? '' : '&branchId=$activeBranchId';
     return Dashboard.fromJson(await _cachedGet(
-        '/api/dashboard?date=$date&month=$month', 'dash_admin_cache'));
+        '/api/dashboard?date=$date&month=$month$branch',
+        'dash_admin_cache_${activeBranchId ?? 'all'}'));
+  }
+
+  // the branches the superadmin can switch between or manage.
+  Future<List<Branch>> branches() async {
+    final r =
+        await http.get(Uri.parse('$baseUrl/api/branches'), headers: _headers);
+    final body = await _decode(r);
+    return (body['branches'] as List).map((e) => Branch.fromJson(e)).toList();
+  }
+
+  // creates a branch with its own calculation values and its first admin.
+  Future<NewBranch> createBranch(
+      String name, Map<String, int> settings, String adminName,
+      String adminUsername) async {
+    final r = await http.post(Uri.parse('$baseUrl/api/branches'),
+        headers: _headers,
+        body: jsonEncode({
+          'name': name,
+          'settings': settings,
+          'admin': {'name': adminName, 'username': adminUsername},
+        }));
+    return NewBranch.fromJson(await _decode(r));
+  }
+
+  Future<Branch> updateBranch(int id, {String? name, bool? active}) async {
+    final r = await http.patch(Uri.parse('$baseUrl/api/branches/$id'),
+        headers: _headers,
+        body: jsonEncode({
+          if (name != null) 'name': name,
+          if (active != null) 'active': active,
+        }));
+    return Branch.fromJson((await _decode(r))['branch']);
+  }
+
+  Future<List<AppUser>> branchMembers(int id) async {
+    final r = await http.get(Uri.parse('$baseUrl/api/branches/$id/members'),
+        headers: _headers);
+    final body = await _decode(r);
+    return (body['members'] as List).map((e) => AppUser.fromJson(e)).toList();
+  }
+
+  Future<void> changePassword(String current, String next) async {
+    final r = await http.put(Uri.parse('$baseUrl/api/me/password'),
+        headers: _headers,
+        body:
+            jsonEncode({'currentPassword': current, 'newPassword': next}));
+    await _decode(r);
   }
 
   Future<MyDashboard> dashboardMe(String date, String month) async {
@@ -110,30 +196,35 @@ class ApiClient {
   }
 
   Future<Settings> settings() async {
-    final r =
-        await http.get(Uri.parse('$baseUrl/api/settings'), headers: _headers);
+    final uri =
+        Uri.parse('$baseUrl/api/settings').replace(queryParameters: _scoped({}));
+    final r = await http.get(uri, headers: _headers);
     final json = (await _decode(r))['settings'];
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('settings_cache', jsonEncode(json));
+    await prefs.setString('settings_cache_${activeBranchId ?? 'all'}',
+        jsonEncode(json));
     return Settings.fromJson(json);
   }
 
   // last settings we saw online, so the entry form can preview offline.
   Future<Settings?> cachedSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('settings_cache');
+    final raw = prefs.getString('settings_cache_${activeBranchId ?? 'all'}');
     return raw == null ? null : Settings.fromJson(jsonDecode(raw));
   }
 
   Future<Settings> updateSettings(Map<String, int> data) async {
-    final r = await http.put(Uri.parse('$baseUrl/api/settings'),
-        headers: _headers, body: jsonEncode(data));
+    final uri =
+        Uri.parse('$baseUrl/api/settings').replace(queryParameters: _scoped({}));
+    final r = await http.put(uri, headers: _headers, body: jsonEncode(data));
     return Settings.fromJson((await _decode(r))['settings']);
   }
 
   Future<Computed> preview(
       int closingCount, int bopInput, int audienceCount, int? harian) async {
-    final r = await http.post(Uri.parse('$baseUrl/api/entries/preview'),
+    final uri = Uri.parse('$baseUrl/api/entries/preview')
+        .replace(queryParameters: _scoped({}));
+    final r = await http.post(uri,
         headers: _headers,
         body: jsonEncode({
           'closingCount': closingCount,
@@ -160,7 +251,8 @@ class ApiClient {
     if (presenterId != null) q['presenterId'] = '$presenterId';
     if (from != null) q['from'] = from;
     if (to != null) q['to'] = to;
-    final uri = Uri.parse('$baseUrl/api/entries').replace(queryParameters: q);
+    final uri =
+        Uri.parse('$baseUrl/api/entries').replace(queryParameters: _scoped(q));
     final r = await http.get(uri, headers: _headers);
     return EntryPage.fromJson(await _decode(r));
   }
@@ -189,7 +281,7 @@ class ApiClient {
   // admin month recap: every approved entry in a yyyy-mm period, unpaginated.
   Future<List<SalesEntry>> monthEntries(String month) async {
     final uri = Uri.parse('$baseUrl/api/entries/month')
-        .replace(queryParameters: {'month': month});
+        .replace(queryParameters: _scoped({'month': month}));
     final r = await http.get(uri, headers: _headers);
     final body = await _decode(r);
     return (body['entries'] as List)
@@ -198,8 +290,9 @@ class ApiClient {
   }
 
   Future<List<AppUser>> presenters() async {
-    final r =
-        await http.get(Uri.parse('$baseUrl/api/presenters'), headers: _headers);
+    final uri = Uri.parse('$baseUrl/api/presenters')
+        .replace(queryParameters: _scoped({}));
+    final r = await http.get(uri, headers: _headers);
     final body = await _decode(r);
     return (body['presenters'] as List)
         .map((e) => AppUser.fromJson(e))
@@ -210,8 +303,31 @@ class ApiClient {
       String name, String username, String password) async {
     final r = await http.post(Uri.parse('$baseUrl/api/presenters'),
         headers: _headers,
-        body: jsonEncode(
-            {'name': name, 'username': username, 'password': password}));
+        body: jsonEncode({
+          'name': name,
+          'username': username,
+          'password': password,
+          if (activeBranchId != null) 'branchId': activeBranchId,
+        }));
+    return AppUser.fromJson((await _decode(r))['presenter']);
+  }
+
+  // superadmin only: move a presenter to another branch. past entries stay
+  // with the branch they were recorded in.
+  // superadmin only: issue a new password for an account whose owner forgot
+  // theirs. the new password comes back once and is never stored in clear text.
+  Future<String> resetPassword(int userId) async {
+    final r = await http.post(
+        Uri.parse('$baseUrl/api/users/$userId/reset-password'),
+        headers: _headers);
+    return (await _decode(r))['password'] as String;
+  }
+
+  Future<AppUser> movePresenter(int presenterId, int branchId) async {
+    final r = await http.patch(
+        Uri.parse('$baseUrl/api/presenters/$presenterId/branch'),
+        headers: _headers,
+        body: jsonEncode({'branchId': branchId}));
     return AppUser.fromJson((await _decode(r))['presenter']);
   }
 }

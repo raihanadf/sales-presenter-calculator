@@ -1,20 +1,32 @@
-import type { User, Settings, SalesEntry } from "../db/schema";
+import type { User, Settings, SalesEntry, Branch } from "../db/schema";
 
 // serializers keep internal columns (password_hash) and db shape out of
 // responses. handlers return these, never raw rows.
 
-export function presentUser(u: User) {
+export function presentBranch(b: Branch) {
+  return {
+    id: b.id,
+    name: b.name,
+    active: b.active,
+    createdAt: b.createdAt,
+  };
+}
+
+export function presentUser(u: User, branchName?: string | null) {
   return {
     id: u.id,
     name: u.name,
     username: u.username,
     role: u.role,
+    branchId: u.branchId,
+    branchName: branchName ?? null,
     createdAt: u.createdAt,
   };
 }
 
 export function presentSettings(s: Settings) {
   return {
+    branchId: s.branchId,
     closingPrice: s.closingPrice,
     bopPercent: s.bopPercent,
     souvenirUnitPrice: s.souvenirUnitPrice,
@@ -24,7 +36,7 @@ export function presentSettings(s: Settings) {
   };
 }
 
-export function presentEntry(e: SalesEntry, presenterName?: string) {
+export function presentEntry(e: SalesEntry, presenterName?: string, branchName?: string) {
   const hasSettingsSnapshot =
     e.closingPriceUsed !== null &&
     e.bopPercentUsed !== null &&
@@ -35,6 +47,8 @@ export function presentEntry(e: SalesEntry, presenterName?: string) {
     id: e.id,
     presenterId: e.presenterId,
     presenterName: presenterName ?? null,
+    branchId: e.branchId,
+    branchName: branchName ?? null,
     entryDate: e.entryDate,
     status: e.status,
     inputs: {

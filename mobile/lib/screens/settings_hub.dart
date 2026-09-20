@@ -4,6 +4,8 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../update_dialog.dart';
 import '../widgets.dart';
+import 'branches.dart';
+import 'change_password.dart';
 import 'presenters.dart';
 import 'settings.dart';
 
@@ -68,6 +70,16 @@ class SettingsHubBody extends StatelessWidget {
                           '@${user.username}',
                           style: TextStyle(color: context.colors.muted),
                         ),
+                        if (user.branchName != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            user.branchName!,
+                            style: TextStyle(
+                              color: context.colors.muted,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 9),
                         DecoratedBox(
                           decoration: BoxDecoration(
@@ -81,7 +93,11 @@ class SettingsHubBody extends StatelessWidget {
                               vertical: 5,
                             ),
                             child: Text(
-                              user.isAdmin ? 'Administrator' : 'Presenter',
+                              user.isSuperadmin
+                                  ? 'Owner'
+                                  : user.isAdmin
+                                      ? 'Admin Cabang'
+                                      : 'Presenter',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
@@ -109,25 +125,55 @@ class SettingsHubBody extends StatelessWidget {
           _SettingsTile(
             icon: Icons.groups_rounded,
             title: 'Kelola Presenter',
-            subtitle: 'Tambah dan lihat akun sales',
+            subtitle: user.isSuperadmin && state.selectedBranchId == null
+                ? 'Semua presenter di semua cabang'
+                : 'Tambah dan lihat akun sales',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const PresentersScreen()),
             ),
           ),
           const SizedBox(height: 12),
-          _SettingsTile(
-            icon: Icons.sell_rounded,
-            title: 'Pengaturan Harga',
-            subtitle: 'Harga closing, BOP, souvenir, dan harian',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          if (user.isSuperadmin) ...[
+            _SettingsTile(
+              icon: Icons.storefront_rounded,
+              title: 'Kelola Cabang',
+              subtitle: 'Buat cabang, tutup, dan buka kembali',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BranchesScreen()),
+              ),
             ),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 12),
+            // money is owner-only, and always belongs to one named branch.
+            _SettingsTile(
+              icon: Icons.sell_rounded,
+              title: 'Pengaturan Harga',
+              subtitle: state.selectedBranchId == null
+                  ? 'Pilih satu cabang dulu di halaman utama'
+                  : 'Harga ${state.selectedBranch?.name ?? 'cabang ini'}',
+              onTap: state.selectedBranchId == null
+                  ? null
+                  : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 18),
         ],
         const SectionTitle('Aplikasi'),
+        _SettingsTile(
+          icon: Icons.password_rounded,
+          title: 'Ganti Password',
+          subtitle: 'Ubah password akun ini',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         _SettingsTile(
           icon: Icons.palette_rounded,
           title: 'Ganti Tema',
@@ -157,7 +203,8 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  // null disables the tile, e.g. prices before a branch is picked.
+  final VoidCallback? onTap;
   const _SettingsTile(
       {required this.icon,
       required this.title,

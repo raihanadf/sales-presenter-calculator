@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
@@ -26,8 +27,108 @@ class _PresentersScreenState extends State<PresentersScreen> {
   }
 
   Future<void> _add() async {
+    final state = context.read<AppState>();
+    // a new presenter must land in exactly one branch, so the owner has to
+    // pick which branch it is before creating one.
+    if (state.user!.isSuperadmin && state.selectedBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Pilih satu cabang dulu di halaman utama.')));
+      return;
+    }
     final created = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, backgroundColor: context.colors.card, builder: (_) => const _AddPresenterSheet());
     if (created == true) setState(_reload);
+  }
+
+  // superadmin only: move a presenter to another branch. entries already
+  // recorded stay with the branch they were recorded in.
+  Future<void> _move(AppUser presenter) async {
+    final state = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final target = await showModalBottomSheet<Branch>(
+      context: context,
+      backgroundColor: context.colors.card,
+      builder: (_) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.fromLTRB(context.pageInset, 18, context.pageInset, 24),
+          children: [
+            Text('Pindahkan ${presenter.name}', style: display(19)),
+            const SizedBox(height: 4),
+            Text('Riwayat closing lama tetap tercatat di cabang lamanya.',
+                style: TextStyle(color: context.colors.muted, fontSize: 13)),
+            const SizedBox(height: 14),
+            for (final branch in state.branches.where((b) => b.active && b.id != presenter.branchId))
+              ListTile(
+                leading: const Icon(Icons.storefront_rounded),
+                title: Text(branch.name),
+                onTap: () => Navigator.pop(context, branch),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (target == null) return;
+    try {
+      await state.api.movePresenter(presenter.id, target.id);
+      messenger.showSnackBar(SnackBar(
+          content: Text('${presenter.name} dipindah ke ${target.name}.')));
+      setState(_reload);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  // superadmin only: issue a new password when someone forgot theirs. it is
+  // shown once here and must be copied out now.
+  Future<void> _resetPassword(AppUser presenter) async {
+    final state = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Reset password ${presenter.name}?'),
+        content: const Text(
+            'Password lama langsung tidak bisa dipakai. Password baru muncul satu kali.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Reset')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final password = await state.api.resetPassword(presenter.id);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Password baru ${presenter.name}'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            SelectableText(password,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 18)),
+            const SizedBox(height: 10),
+            const Text('Kirim ke orangnya. Tidak bisa dilihat lagi setelah ini.'),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(
+                    text: 'Username: @${presenter.username}\nPassword: $password'));
+                Navigator.pop(context);
+              },
+              child: const Text('Salin & tutup'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   @override
@@ -62,8 +163,23 @@ class _PresentersScreenState extends State<PresentersScreen> {
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(list[i].name, style: TextStyle(fontWeight: FontWeight.w700, color: context.colors.ink, fontSize: 15)),
                   const SizedBox(height: 2),
-                  Text('@${list[i].username}', style: TextStyle(color: context.colors.muted, fontSize: 13)),
+                  Text(
+                      list[i].branchName == null
+                          ? '@${list[i].username}'
+                          : '@${list[i].username} · ${list[i].branchName}',
+                      style: TextStyle(color: context.colors.muted, fontSize: 13)),
                 ])),
+                if (context.read<AppState>().user!.isSuperadmin)
+                  PopupMenuButton<String>(
+                    onSelected: (value) => value == 'move'
+                        ? _move(list[i])
+                        : _resetPassword(list[i]),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'move', child: Text('Pindah cabang')),
+                      PopupMenuItem(
+                          value: 'reset', child: Text('Reset password')),
+                    ],
+                  ),
               ]),
             ),
           );

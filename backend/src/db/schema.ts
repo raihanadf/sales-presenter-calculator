@@ -1,18 +1,33 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-// accounts. admin creates presenters; role gates admin-only routes.
+// one branch = one cabang (a team/group counts as its own branch).
+// inactive branches stay for history; their members go read-only.
+export const branches = sqliteTable("branches", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at").notNull(),
+});
+
+// accounts. superadmin owns every branch and has no branch of its own;
+// admin and presenter always belong to exactly one branch (db check).
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role", { enum: ["admin", "presenter"] }).notNull().default("presenter"),
+  role: text("role", { enum: ["superadmin", "admin", "presenter"] })
+    .notNull()
+    .default("presenter"),
+  branchId: integer("branch_id").references(() => branches.id),
   createdAt: integer("created_at").notNull(),
 });
 
-// singleton row (id=1) holding the fixed calculation values, admin-editable.
+// one row per branch: that branch's own calculation values, superadmin-editable.
 export const settings = sqliteTable("settings", {
-  id: integer("id").primaryKey(),
+  branchId: integer("branch_id")
+    .primaryKey()
+    .references(() => branches.id),
   closingPrice: integer("closing_price").notNull(),
   bopPercent: integer("bop_percent").notNull(),
   souvenirUnitPrice: integer("souvenir_unit_price").notNull(),
@@ -23,11 +38,15 @@ export const settings = sqliteTable("settings", {
 
 // one row = one presenter's daily closing recap. inputs, settings, and
 // computed values are snapshotted so later settings changes never rewrite it.
+// branch_id is snapshotted too: moving a presenter never moves old entries.
 export const salesEntries = sqliteTable("sales_entries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   presenterId: integer("presenter_id")
     .notNull()
     .references(() => users.id),
+  branchId: integer("branch_id")
+    .notNull()
+    .references(() => branches.id),
   entryDate: text("entry_date").notNull(), // iso yyyy-mm-dd
   status: text("status", { enum: ["pending", "approved"] })
     .notNull()
@@ -49,6 +68,7 @@ export const salesEntries = sqliteTable("sales_entries", {
   createdAt: integer("created_at").notNull(),
 });
 
+export type Branch = typeof branches.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type SalesEntry = typeof salesEntries.$inferSelect;

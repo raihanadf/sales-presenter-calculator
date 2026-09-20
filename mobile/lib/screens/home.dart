@@ -33,10 +33,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _load() {
-    final api = context.read<AppState>().api;
-    _future = _isAdmin
-        ? api.dashboard(today(), thisMonth())
-        : api.dashboardMe(today(), thisMonth());
+    final state = context.read<AppState>();
+    // the owner needs the branch list before it can switch between branches.
+    _future = state.user!.isSuperadmin
+        ? state
+            .loadBranches()
+            .then((_) => state.api.dashboard(today(), thisMonth()))
+        : _isAdmin
+            ? state.api.dashboard(today(), thisMonth())
+            : state.api.dashboardMe(today(), thisMonth());
   }
 
   Future<void> _refresh() async {
@@ -227,10 +232,43 @@ class _MyBody extends StatelessWidget {
         Reveal(
           child: Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 14),
-            child: Text('Halo, $name',
-                style: TextStyle(color: context.colors.muted, fontSize: 15)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Halo, $name',
+                    style:
+                        TextStyle(color: context.colors.muted, fontSize: 15)),
+                if (data.branchName != null) ...[
+                  const SizedBox(height: 3),
+                  Text(data.branchName!,
+                      style: TextStyle(
+                          color: context.colors.ink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ],
+            ),
           ),
         ),
+        if (!data.branchActive)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Panel(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Icon(Icons.lock_outline_rounded,
+                    size: 20, color: context.colors.muted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Cabang ini sudah ditutup. Kamu masih bisa melihat data, '
+                    'tapi belum bisa mencatat closing baru.',
+                    style: TextStyle(color: context.colors.muted, fontSize: 13),
+                  ),
+                ),
+              ]),
+            ),
+          ),
         Reveal(
           delayMs: 70,
           child: HeroPanel(
@@ -394,16 +432,37 @@ class _AdminBody extends StatelessWidget {
       {required this.data, required this.name, required this.onChanged});
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final user = state.user!;
+
     return ListView(
       padding: pagePadding(context, top: 10, bottom: 124),
       children: [
         Reveal(
           child: Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 14),
-            child: Text('Halo, $name',
-                style: TextStyle(color: context.colors.muted, fontSize: 15)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Halo, $name',
+                    style:
+                        TextStyle(color: context.colors.muted, fontSize: 15)),
+                if (!user.isSuperadmin && user.branchName != null) ...[
+                  const SizedBox(height: 3),
+                  Text(user.branchName!,
+                      style: TextStyle(
+                          color: context.colors.ink,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ],
+            ),
           ),
         ),
+        if (user.isSuperadmin) ...[
+          _BranchPicker(onChanged: onChanged),
+          const SizedBox(height: 14),
+        ],
         Reveal(
           delayMs: 70,
           child: HeroPanel(
@@ -450,6 +509,41 @@ class _AdminBody extends StatelessWidget {
         else
           ...data.pending.map((entry) =>
               _PendingApprovalTile(entry: entry, onApproved: onChanged)),
+        if (data.perBranch.isNotEmpty) ...[
+          const SizedBox(height: 26),
+          const SectionTitle('Peringkat cabang'),
+          Panel(
+              padding: EdgeInsets.zero,
+              child: Column(children: [
+                for (var i = 0; i < data.perBranch.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                        height: 1,
+                        color: context.colors.line,
+                        indent: 18,
+                        endIndent: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 16),
+                    child: AdaptiveSplit(
+                      leading: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(data.perBranch[i].branchName,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: context.colors.ink)),
+                            const SizedBox(height: 4),
+                            Text('${data.perBranch[i].entries} closing',
+                                style: TextStyle(
+                                    color: context.colors.muted, fontSize: 13)),
+                          ]),
+                      trailing: Rupiah(data.perBranch[i].total, size: 16),
+                    ),
+                  ),
+                ],
+              ])),
+        ],
         const SizedBox(height: 26),
         const SectionTitle('Peringkat presenter'),
         if (data.top3.isEmpty)
@@ -486,7 +580,10 @@ class _AdminBody extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                     color: context.colors.ink)),
                             const SizedBox(height: 4),
-                            Text('${data.monthRecap[i].entries} closing',
+                            Text(
+                                data.monthRecap[i].branchName == null
+                                    ? '${data.monthRecap[i].entries} closing'
+                                    : '${data.monthRecap[i].branchName} · ${data.monthRecap[i].entries} closing',
                                 style: TextStyle(
                                     color: context.colors.muted, fontSize: 13)),
                           ]),
@@ -498,6 +595,60 @@ class _AdminBody extends StatelessWidget {
       ],
     );
   }
+}
+
+// lets the owner look at one branch at a time, or at all of them at once.
+class _BranchPicker extends StatelessWidget {
+  final Future<void> Function() onChanged;
+  const _BranchPicker({required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final selected = state.selectedBranchId;
+
+    Future<void> pick(int? branchId) async {
+      state.selectBranch(branchId);
+      await onChanged();
+    }
+
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _BranchChip(
+              label: 'Semua cabang',
+              selected: selected == null,
+              onTap: () => pick(null)),
+          for (final branch in state.branches)
+            _BranchChip(
+              label: branch.active ? branch.name : '${branch.name} (tutup)',
+              selected: selected == branch.id,
+              onTap: () => pick(branch.id),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BranchChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _BranchChip(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: ChoiceChip(
+          label: Text(label),
+          selected: selected,
+          onSelected: (_) => onTap(),
+        ),
+      );
 }
 
 class _PendingApprovalTile extends StatefulWidget {
@@ -555,7 +706,7 @@ class _PendingApprovalTileState extends State<_PendingApprovalTile> {
                         style: const TextStyle(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 5),
                     Text(
-                        '${widget.entry.entryDate} · ${widget.entry.inputs.closingCount} closing',
+                        '${widget.entry.branchName == null ? '' : '${widget.entry.branchName} · '}${widget.entry.entryDate} · ${widget.entry.inputs.closingCount} closing',
                         style: TextStyle(
                             fontSize: 13, color: context.colors.muted)),
                     const SizedBox(height: 7),
@@ -617,7 +768,10 @@ class _PodiumTile extends StatelessWidget {
                         color: context.colors.ink,
                         fontSize: 15)),
                 const SizedBox(height: 4),
-                Text('${row.entries} closing',
+                Text(
+                    row.branchName == null
+                        ? '${row.entries} closing'
+                        : '${row.branchName} · ${row.entries} closing',
                     style:
                         TextStyle(color: context.colors.muted, fontSize: 13)),
               ])),

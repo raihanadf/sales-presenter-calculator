@@ -7,6 +7,11 @@ compatibility_flags = ["nodejs_compat"]
 #   local dev  -> read from .dev.vars (gitignored)
 #   production -> `wrangler secret put JWT_SECRET`
 
+# oldest app build allowed to write. raise it in the same deploy that ships the
+# build people must move to; older apps can still read.
+[vars]
+MIN_APP_VERSION = "1.2.0"
+
 [observability]
 enabled = true
 

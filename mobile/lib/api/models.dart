@@ -1,24 +1,73 @@
 // plain data models mirroring the backend serializers.
 
+class Branch {
+  final int id;
+  final String name;
+  final bool active;
+
+  Branch({required this.id, required this.name, required this.active});
+
+  factory Branch.fromJson(Map<String, dynamic> j) => Branch(
+        id: j['id'],
+        name: j['name'],
+        active: j['active'] == true,
+      );
+}
+
+// the password of a freshly created branch admin, shown once and never again.
+class NewBranch {
+  final Branch branch;
+  final String adminUsername;
+  final String adminPassword;
+
+  NewBranch({
+    required this.branch,
+    required this.adminUsername,
+    required this.adminPassword,
+  });
+
+  factory NewBranch.fromJson(Map<String, dynamic> j) => NewBranch(
+        branch: Branch.fromJson(j['branch']),
+        adminUsername: j['admin']['username'],
+        adminPassword: j['admin']['password'],
+      );
+}
+
 class AppUser {
   final int id;
   final String name;
   final String username;
   final String role;
+  final int? branchId;
+  final String? branchName;
 
-  AppUser({required this.id, required this.name, required this.username, required this.role});
+  AppUser({
+    required this.id,
+    required this.name,
+    required this.username,
+    required this.role,
+    required this.branchId,
+    required this.branchName,
+  });
 
-  bool get isAdmin => role == 'admin';
+  // the owner: sees every branch and is the only one who may touch money.
+  bool get isSuperadmin => role == 'superadmin';
+
+  // anything with an admin desk, branch-level or above.
+  bool get isAdmin => role == 'admin' || role == 'superadmin';
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
         id: j['id'],
         name: j['name'],
         username: j['username'],
         role: j['role'],
+        branchId: j['branchId'],
+        branchName: j['branchName'],
       );
 }
 
 class Settings {
+  final int branchId;
   final int closingPrice;
   final int bopPercent;
   final int souvenirUnitPrice;
@@ -26,6 +75,7 @@ class Settings {
   final int harianDefault;
 
   Settings({
+    required this.branchId,
     required this.closingPrice,
     required this.bopPercent,
     required this.souvenirUnitPrice,
@@ -34,6 +84,7 @@ class Settings {
   });
 
   factory Settings.fromJson(Map<String, dynamic> j) => Settings(
+        branchId: j['branchId'],
         closingPrice: j['closingPrice'],
         bopPercent: j['bopPercent'],
         souvenirUnitPrice: j['souvenirUnitPrice'],
@@ -109,6 +160,8 @@ class SalesEntry {
   final int id;
   final int presenterId;
   final String? presenterName;
+  final int branchId;
+  final String? branchName;
   final String entryDate;
   final String status;
   final EntryInputs inputs;
@@ -120,6 +173,8 @@ class SalesEntry {
     required this.id,
     required this.presenterId,
     required this.presenterName,
+    required this.branchId,
+    required this.branchName,
     required this.entryDate,
     required this.status,
     required this.inputs,
@@ -134,6 +189,8 @@ class SalesEntry {
         id: j['id'],
         presenterId: j['presenterId'],
         presenterName: j['presenterName'],
+        branchId: j['branchId'],
+        branchName: j['branchName'],
         entryDate: j['entryDate'],
         status: j['status'],
         inputs: EntryInputs.fromJson(j['inputs']),
@@ -169,12 +226,14 @@ class EntryPage {
 class RecapRow {
   final int presenterId;
   final String presenterName;
+  final String? branchName;
   final int total;
   final int entries;
 
   RecapRow({
     required this.presenterId,
     required this.presenterName,
+    required this.branchName,
     required this.total,
     required this.entries,
   });
@@ -182,6 +241,29 @@ class RecapRow {
   factory RecapRow.fromJson(Map<String, dynamic> j) => RecapRow(
         presenterId: j['presenterId'],
         presenterName: j['presenterName'],
+        branchName: j['branchName'],
+        total: j['total'],
+        entries: j['entries'],
+      );
+}
+
+// one branch's month total, for ranking branches against each other.
+class BranchRecapRow {
+  final int branchId;
+  final String branchName;
+  final int total;
+  final int entries;
+
+  BranchRecapRow({
+    required this.branchId,
+    required this.branchName,
+    required this.total,
+    required this.entries,
+  });
+
+  factory BranchRecapRow.fromJson(Map<String, dynamic> j) => BranchRecapRow(
+        branchId: j['branchId'],
+        branchName: j['branchName'],
         total: j['total'],
         entries: j['entries'],
       );
@@ -190,6 +272,8 @@ class RecapRow {
 class Dashboard {
   final String date;
   final String month;
+  final int? branchId;
+  final List<BranchRecapRow> perBranch;
   final int todayIncome;
   final int monthIncome;
   final List<RecapRow> top3;
@@ -199,6 +283,8 @@ class Dashboard {
   Dashboard({
     required this.date,
     required this.month,
+    required this.branchId,
+    required this.perBranch,
     required this.todayIncome,
     required this.monthIncome,
     required this.top3,
@@ -209,6 +295,10 @@ class Dashboard {
   factory Dashboard.fromJson(Map<String, dynamic> j) => Dashboard(
         date: j['date'],
         month: j['month'],
+        branchId: j['branchId'],
+        perBranch: ((j['perBranch'] ?? []) as List)
+            .map((e) => BranchRecapRow.fromJson(e))
+            .toList(),
         todayIncome: j['todayIncome'],
         monthIncome: j['monthIncome'],
         top3: (j['top3'] as List).map((e) => RecapRow.fromJson(e)).toList(),
@@ -231,12 +321,14 @@ class RecentEntry {
   final int closingCount;
   final int takeHome;
   final String status;
+  final String? branchName;
   RecentEntry({
     required this.id,
     required this.entryDate,
     required this.closingCount,
     required this.takeHome,
     required this.status,
+    required this.branchName,
   });
   bool get isPending => status == 'pending';
   factory RecentEntry.fromJson(Map<String, dynamic> j) => RecentEntry(
@@ -245,10 +337,14 @@ class RecentEntry {
         closingCount: j['closingCount'],
         takeHome: j['takeHome'],
         status: j['status'],
+        branchName: j['branchName'],
       );
 }
 
 class MyDashboard {
+  final int branchId;
+  final String? branchName;
+  final bool branchActive;
   final int todayIncome;
   final int monthIncome;
   final int monthClosings;
@@ -262,6 +358,9 @@ class MyDashboard {
   final List<RecentEntry> recent;
 
   MyDashboard({
+    required this.branchId,
+    required this.branchName,
+    required this.branchActive,
     required this.todayIncome,
     required this.monthIncome,
     required this.monthClosings,
@@ -276,6 +375,9 @@ class MyDashboard {
   });
 
   factory MyDashboard.fromJson(Map<String, dynamic> j) => MyDashboard(
+        branchId: j['branchId'],
+        branchName: j['branchName'],
+        branchActive: j['branchActive'] == true,
         todayIncome: j['todayIncome'],
         monthIncome: j['monthIncome'],
         monthClosings: j['monthClosings'],
