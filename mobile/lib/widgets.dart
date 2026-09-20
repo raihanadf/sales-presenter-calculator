@@ -332,3 +332,25 @@ class TrendBars extends StatelessWidget {
     return '$value';
   }
 }
+
+
+// the company wordmark. the artwork has a white ground, so it always sits on a
+// white card instead of straight on the page.
+class OrgMark extends StatelessWidget {
+  final double height;
+  const OrgMark({super.key, this.height = 34});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: EdgeInsets.symmetric(
+            horizontal: height * 0.34, vertical: height * 0.22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(height * 0.42),
+          border: Border.all(
+              color: context.colors.line,
+              width: context.colors.outlined ? 1.5 : 1),
+        ),
+        child: Image.asset('assets/umg-logo.png', height: height),
+      );
+}
