@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../api/models.dart' show Computed, Settings;
+import '../api/client.dart' show ApiException;
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -27,6 +29,13 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
   Computed? _preview;
   bool _saving = false;
   String? _error;
+
+  // one id per closing, made when the form opens. every resend of this same
+  // closing (a retry, the offline queue) carries it, so the server stores it
+  // once. opening the form again makes a new closing with a new id.
+  final String _clientId = List.generate(
+          16, (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'))
+      .join();
 
   @override
   void initState() {
@@ -72,7 +81,7 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
         calcTakeHome(s, _int(_closing), _int(_bop), _int(_audience), harian);
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool allowDuplicate = false}) async {
     FocusScope.of(context).unfocus();
     setState(() {
       _saving = true;
@@ -80,6 +89,8 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
     });
     try {
       final queued = await context.read<AppState>().saveEntry({
+        'clientId': _clientId,
+        if (allowDuplicate) 'allowDuplicate': true,
         'entryDate': isoDate(_date),
         'closingCount': _int(_closing),
         'bopInput': _int(_bop),
@@ -87,11 +98,41 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
         if (_harian.text.trim().isNotEmpty) 'harian': _int(_harian),
       });
       if (mounted) Navigator.of(context).pop(queued ? 'offline' : 'online');
+    } on ApiException catch (e) {
+      if (e.code == 'duplicate' && mounted) {
+        setState(() => _saving = false);
+        if (await _confirmDuplicate()) await _save(allowDuplicate: true);
+        return;
+      }
+      setState(() => _error = e.toString());
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // the same numbers on the same day were already recorded. usually that is a
+  // second try after the first one looked stuck, so the default is to stop.
+  Future<bool> _confirmDuplicate() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sudah pernah dicatat'),
+        content: const Text(
+            'Closing dengan angka yang sama persis sudah tercatat untuk tanggal ini. '
+            'Kalau tadi sempat dikirim lalu terlihat gagal, biasanya itu sudah masuk.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Tetap simpan')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+        ],
+      ),
+    );
+    return ok == true;
   }
 
   Future<void> _pickDate() async {

@@ -130,7 +130,12 @@ class AppState extends ChangeNotifier {
     try {
       for (final entry in await OfflineQueue.all()) {
         try {
-          await api.createEntry(entry.payload);
+          // closings queued by an older build carry no client id. the queue's
+          // own local id is stable for that closing, so it stands in for it.
+          await api.createEntry({
+            'clientId': 'queued-${entry.localId}',
+            ...entry.payload,
+          });
           await OfflineQueue.remove(entry.localId);
         } on ApiException catch (e) {
           // 426 means this build is too old to write. keep the closing queued;

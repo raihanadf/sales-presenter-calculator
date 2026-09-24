@@ -8,7 +8,9 @@ import 'models.dart';
 class ApiException implements Exception {
   final int status;
   final String message;
-  ApiException(this.status, this.message);
+  // machine-readable reason when the server sends one, e.g. "duplicate".
+  final String? code;
+  ApiException(this.status, this.message, {this.code});
   @override
   String toString() => message;
 }
@@ -65,13 +67,25 @@ class ApiClient {
       };
 
   Future<dynamic> _decode(http.Response r) async {
-    final body = r.body.isEmpty ? null : jsonDecode(r.body);
+    // cloudflare answers some failures (daily limit, outages) with plain text,
+    // not json. say that in words instead of surfacing a FormatException.
+    final dynamic body;
+    try {
+      body = r.body.isEmpty ? null : jsonDecode(r.body);
+    } on FormatException {
+      throw ApiException(
+          r.statusCode,
+          r.statusCode == 429
+              ? 'Server lagi penuh, coba lagi nanti ya.'
+              : 'Server lagi bermasalah (kode ${r.statusCode}), coba lagi nanti ya.');
+    }
     if (r.statusCode >= 200 && r.statusCode < 300) return body;
     final msg = body is Map && body['error'] != null
         ? body['error'].toString()
         : 'request failed (${r.statusCode})';
     if (r.statusCode == 426) onUpdateRequired?.call();
-    throw ApiException(r.statusCode, msg);
+    throw ApiException(r.statusCode, msg,
+        code: body is Map ? body['code'] as String? : null);
   }
 
   Future<AppUser> login(String username, String password) async {

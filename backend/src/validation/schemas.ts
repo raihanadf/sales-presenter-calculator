@@ -62,7 +62,11 @@ export const branchQuerySchema = z.object({
 
 // harian optional -> falls back to settings default in the handler (explicit,
 // not a silent papering-over of missing data).
+// clientId is required: it is what makes a resend safe. allowDuplicate is set
+// only after the person confirmed that an identical closing is intentional.
 export const entryInputSchema = z.object({
+  clientId: z.string().min(16).max(64),
+  allowDuplicate: z.boolean().optional(),
   presenterId: z.number().int().positive().optional(),
   entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   closingCount: z.number().int().nonnegative(),

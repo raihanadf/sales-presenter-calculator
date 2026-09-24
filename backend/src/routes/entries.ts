@@ -15,6 +15,7 @@ import {
   branchQuerySchema,
 } from "../validation/schemas";
 import { presentEntry } from "../serializers";
+import { findByClientId, findIdenticalEntry } from "../services/entries";
 import { requireAdmin } from "../middleware/auth";
 import type { Env, AuthUser } from "../types";
 
@@ -55,36 +56,65 @@ entryRoutes.post("/", async (c) => {
   if (branchId === null) return c.json({ error: "presenter tidak punya cabang" }, 422);
   resolveBranchScope(me, branchId);
 
+  // a resend of something already stored answers with that row, not a copy.
+  const replay = await findByClientId(c.env.DB, parsed.data.clientId);
+  if (replay) return c.json({ entry: presentEntry(replay) }, 200);
+
+  // the same closing typed in twice is refused until the person confirms it.
+  if (!parsed.data.allowDuplicate) {
+    const identical = await findIdenticalEntry(c.env.DB, { ...parsed.data, presenterId });
+    if (identical) {
+      return c.json(
+        {
+          error: "closing yang sama persis sudah tercatat untuk tanggal ini",
+          code: "duplicate",
+          existingId: identical.id,
+        },
+        409,
+      );
+    }
+  }
+
   const status = isAdmin ? "approved" : "pending";
   const now = Date.now();
   const s = await loadSettings(c.env.DB, branchId);
   const harian = parsed.data.harian ?? s.harianDefault;
   const computed = calculate({ ...parsed.data, harian }, s);
 
-  const inserted = await db(c.env.DB)
-    .insert(salesEntries)
-    .values({
-      presenterId,
-      branchId,
-      entryDate: parsed.data.entryDate,
-      status,
-      closingCount: parsed.data.closingCount,
-      bopInput: parsed.data.bopInput,
-      audienceCount: parsed.data.audienceCount,
-      harian,
-      closingPriceUsed: s.closingPrice,
-      bopPercentUsed: s.bopPercent,
-      souvenirUnitPriceUsed: s.souvenirUnitPrice,
-      souvenirPercentUsed: s.souvenirPercent,
-      closingTotal: computed.closingTotal,
-      bopValue: computed.bopValue,
-      souvenirValue: computed.souvenirValue,
-      takeHome: computed.takeHome,
-      approvedAt: status === "approved" ? now : null,
-      approvedBy: status === "approved" ? me.id : null,
-      createdAt: now,
-    })
-    .returning();
+  let inserted;
+  try {
+    inserted = await db(c.env.DB)
+      .insert(salesEntries)
+      .values({
+        clientId: parsed.data.clientId,
+        presenterId,
+        branchId,
+        entryDate: parsed.data.entryDate,
+        status,
+        closingCount: parsed.data.closingCount,
+        bopInput: parsed.data.bopInput,
+        audienceCount: parsed.data.audienceCount,
+        harian,
+        closingPriceUsed: s.closingPrice,
+        bopPercentUsed: s.bopPercent,
+        souvenirUnitPriceUsed: s.souvenirUnitPrice,
+        souvenirPercentUsed: s.souvenirPercent,
+        closingTotal: computed.closingTotal,
+        bopValue: computed.bopValue,
+        souvenirValue: computed.souvenirValue,
+        takeHome: computed.takeHome,
+        approvedAt: status === "approved" ? now : null,
+        approvedBy: status === "approved" ? me.id : null,
+        createdAt: now,
+      })
+      .returning();
+  } catch (err) {
+    // two sends of the same closing raced past the replay check; the unique
+    // index let only one through, so answer with that one.
+    const raced = await findByClientId(c.env.DB, parsed.data.clientId);
+    if (raced) return c.json({ entry: presentEntry(raced) }, 200);
+    throw err;
+  }
   return c.json({ entry: presentEntry(inserted[0]) }, 201);
 });
 

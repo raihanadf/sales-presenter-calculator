@@ -10,7 +10,7 @@ compatibility_flags = ["nodejs_compat"]
 # oldest app build allowed to write. raise it in the same deploy that ships the
 # build people must move to; older apps can still read.
 [vars]
-MIN_APP_VERSION = "1.2.0"
+MIN_APP_VERSION = "2.0.1"
 
 [observability]
 enabled = true
