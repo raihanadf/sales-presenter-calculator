@@ -82,7 +82,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     prefixIcon: Icon(Icons.lock_reset_rounded))),
             if (_error != null) ...[
               const SizedBox(height: 16),
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: TextStyle(color: context.colors.danger)),
             ],
             const SizedBox(height: 26),
             FilledButton(

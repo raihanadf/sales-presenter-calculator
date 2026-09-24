@@ -4,17 +4,48 @@ import 'theme.dart';
 import 'util/format.dart';
 import 'anim.dart';
 
+// every surface used to carry the same 3x4 ink shadow, so the hero, a stat tile and a plain list
+// all shouted at the same volume and nothing led the eye. panels now sit lower by default and
+// the hero passes a deeper lift, so there is a clear first thing to look at
 BoxDecoration panelDecoration(BuildContext context,
-    {Color? color, double radius = kRadius}) {
+    {Color? color, double radius = kRadius, Offset lift = const Offset(2, 3)}) {
   final colors = context.colors;
   return BoxDecoration(
     color: color ?? colors.card,
     borderRadius: BorderRadius.circular(radius),
     border: Border.all(color: colors.line, width: colors.outlined ? 1.5 : 1),
-    boxShadow: colors.outlined
-        ? [BoxShadow(color: colors.ink, offset: const Offset(3, 4))]
-        : null,
+    boxShadow:
+        colors.outlined ? [BoxShadow(color: colors.ink, offset: lift)] : null,
   );
+}
+
+// approved and pending, stamped like a ledger entry instead of a line of coloured text. the old
+// label was lavender (pocket's "teal") for approved and a hard-coded orange for pending
+class StatusStamp extends StatelessWidget {
+  final bool pending;
+  final String label;
+  const StatusStamp({super.key, required this.pending, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final ink = pending ? colors.pending : colors.teal;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: (pending ? colors.gold : colors.mint).withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: ink.withValues(alpha: 0.7), width: 1.2),
+      ),
+      child: Text(label.toUpperCase(),
+          style: TextStyle(
+              fontFamily: 'SpaceGrotesk',
+              color: ink,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.9)),
+    );
+  }
 }
 
 class Rupiah extends StatelessWidget {
@@ -118,7 +149,9 @@ class HeroPanel extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
         decoration: colors.outlined
-            ? panelDecoration(context, color: colors.teal, radius: 28)
+            // the hero leads the screen, so it carries the deepest lift of any surface
+            ? panelDecoration(context,
+                color: colors.wash, radius: 28, lift: const Offset(4, 5))
             : BoxDecoration(
                 borderRadius: BorderRadius.circular(kRadius + 4),
                 gradient: LinearGradient(
@@ -143,27 +176,30 @@ class HeroPanel extends StatelessWidget {
             trailing: trailing ?? const SizedBox.shrink(),
           ),
           const SizedBox(height: 10),
-          CountUpRupiah(amount, size: 42, color: foreground),
+          // on a small phone an 8-digit day broke into "Rp" on one line and the figure on the
+          // next. a total must never split, so it scales down to fit and only ever down
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CountUpRupiah(amount, size: 42, color: foreground),
+          ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.only(top: 14),
-            decoration: BoxDecoration(
-                border: Border(
-                    top:
-                        BorderSide(color: foreground.withValues(alpha: 0.35)))),
-            child: AdaptiveSplit(
-              leading: Row(children: [
-                Icon(Icons.account_balance_wallet_rounded,
-                    size: 18,
-                    color: colors.outlined ? colors.ink : colors.mint),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Text(subLabel,
-                        style: TextStyle(color: muted, fontSize: 13))),
-              ]),
-              trailing: Rupiah(subAmount,
-                  size: 16, color: colors.outlined ? colors.ink : colors.mint),
-            ),
+          // a dashed tear line, like the total on a receipt: the same device the entry form
+          // already uses above its "diterima presenter" figure, so every money summary matches
+          DashedLine(color: foreground.withValues(alpha: 0.4)),
+          const SizedBox(height: 14),
+          AdaptiveSplit(
+            leading: Row(children: [
+              Icon(Icons.account_balance_wallet_rounded,
+                  size: 18,
+                  color: colors.outlined ? colors.ink : colors.mint),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(subLabel,
+                      style: TextStyle(color: muted, fontSize: 13))),
+            ]),
+            trailing: Rupiah(subAmount,
+                size: 16, color: colors.outlined ? colors.ink : colors.mint),
           ),
         ]),
       ),
@@ -210,23 +246,37 @@ class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (!context.colors.outlined) ...[
-            Container(
-                width: 4,
-                height: 22,
-                decoration: BoxDecoration(
-                    color: context.colors.mint,
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(width: 10),
-          ],
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    // a ruled line running off to the edge is what a section break looks like in a real ledger,
+    // and it costs nothing structurally. dropped at large text sizes, where the title needs the room
+    final ruled = !context.usesLargeText;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        if (!colors.outlined) ...[
+          Container(
+              width: 4,
+              height: 22,
+              decoration: BoxDecoration(
+                  color: colors.mint, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 10),
+        ],
+        // the title keeps its natural width and the rule takes whatever is left. as a flexible
+        // beside an expanded rule it could only ever have half the row, which wrapped
+        // "peringkat presenter" onto two lines. every title is a short fixed string, and at
+        // large text sizes the rule steps aside so the title gets the whole row
+        if (ruled) ...[
+          Text(text, style: display(18, weight: FontWeight.w700, spacing: -0.3)),
+          const SizedBox(width: 12),
+          Expanded(child: DashedLine(color: colors.rule)),
+        ] else
           Expanded(
               child: Text(text,
                   style: display(18, weight: FontWeight.w700, spacing: -0.3))),
-        ]),
-      );
+      ]),
+    );
+  }
 }
 
 class Panel extends StatelessWidget {
@@ -304,13 +354,19 @@ class TrendBars extends StatelessWidget {
                 curve: Curves.easeOutCubic,
                 builder: (context, t, _) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 5),
-                  height: 8 + ratio * 78 * t,
+                  height: 4 + ratio * 84 * t,
                   decoration: BoxDecoration(
-                    color: active ? context.colors.mint : context.colors.paper,
+                    // a quiet tint rather than the page colour: on a card, paper was invisible
+                    color: active
+                        ? context.colors.mint
+                        : context.colors.ink.withValues(alpha: 0.07),
                     border: Border.all(
                         color: context.colors.line,
                         width: context.colors.outlined ? 1.2 : 0),
-                    borderRadius: BorderRadius.circular(7),
+                    // rounding every corner turned a short bar into a lozenge; a bar should sit
+                    // on the axis and only round where it ends
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(6)),
                   ),
                 ),
               ),

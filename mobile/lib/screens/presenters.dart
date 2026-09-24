@@ -244,7 +244,7 @@ class _AddPresenterSheetState extends State<_AddPresenterSheet> {
           TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (min 6)', prefixIcon: Icon(Icons.lock_outline_rounded))),
           if (_error != null) ...[
             const SizedBox(height: 14),
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            Text(_error!, style: TextStyle(color: context.colors.danger)),
           ],
           const SizedBox(height: 22),
           FilledButton(

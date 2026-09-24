@@ -122,7 +122,7 @@ class _ForcedUpdateScreenState extends State<ForcedUpdateScreen> {
               ],
               if (_error != null) ...[
                 const SizedBox(height: 18),
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: TextStyle(color: context.colors.danger)),
               ],
               const SizedBox(height: 26),
               if (_path != null)

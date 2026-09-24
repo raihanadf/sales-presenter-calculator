@@ -163,7 +163,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(err,
                         style: TextStyle(
-                            fontSize: 12, color: Colors.orange.shade800)),
+                            fontSize: 12, color: context.colors.pending)),
                   ),
               ],
               const SizedBox(height: 12),
@@ -195,7 +195,7 @@ class _ImportSheetState extends State<_ImportSheet> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 14),
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: TextStyle(color: context.colors.danger)),
               ],
               const SizedBox(height: 20),
               FilledButton(
@@ -354,7 +354,7 @@ class _ExportSheetState extends State<_ExportSheet> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 14),
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: TextStyle(color: context.colors.danger)),
             ],
             const SizedBox(height: 20),
             FilledButton.icon(

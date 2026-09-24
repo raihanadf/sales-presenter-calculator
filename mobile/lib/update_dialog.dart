@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme.dart';
 import 'update_service.dart';
 
 Future<void> showUpdateCheck(BuildContext context) async {
@@ -78,13 +79,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: const Color(0xFFFFF4D8), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: context.colors.gold.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(12)),
                     child: Text(release.notes.replaceAll(RegExp(r'[#*_`]'), '').trim(), style: const TextStyle(fontSize: 13)),
                   ),
                   const SizedBox(height: 10),
                   const Text('Download selesai. Tekan Update untuk memasang versi baru.'),
                 ],
-                if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+                if (_error != null) Text(_error!, style: TextStyle(color: context.colors.danger)),
               ]),
             ),
       actions: [

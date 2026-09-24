@@ -46,7 +46,7 @@ class _EntryBreakdown extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(entry.entryDate, style: display(20)),
             const SizedBox(height: 6),
-            Text(entry.isPending ? 'Menunggu persetujuan admin' : 'Sudah disetujui', style: TextStyle(color: entry.isPending ? Colors.orange.shade900 : context.colors.teal, fontWeight: FontWeight.w700)),
+            Text(entry.isPending ? 'Menunggu persetujuan admin' : 'Sudah disetujui', style: TextStyle(color: entry.isPending ? context.colors.pending : context.colors.teal, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             const Text('Diterima presenter'),
             Rupiah(result.takeHome, size: 30),

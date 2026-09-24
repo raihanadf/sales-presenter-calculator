@@ -256,10 +256,12 @@ class _ThemePicker extends StatelessWidget {
               _ThemeChoice(
                 title: 'Pocket Ledger',
                 subtitle: 'Pastel, garis hitam, lebih playful',
-                colors: const [
-                  Color(0xFFD6BFFF),
-                  Color(0xFFBFF59A),
-                  Color(0xFFFFD88A)
+                // read from the palette itself: hard-coded copies went stale the moment the
+                // theme changed, and the picker then previewed colours the app no longer used
+                colors: [
+                  AppPalette.pocket.wash,
+                  AppPalette.pocket.mint,
+                  AppPalette.pocket.gold
                 ],
                 selected: state.themeStyle == AppThemeStyle.pocket,
                 onTap: () async {
@@ -271,10 +273,10 @@ class _ThemePicker extends StatelessWidget {
               _ThemeChoice(
                 title: 'Teal Ledger',
                 subtitle: 'Tema hijau klasik',
-                colors: const [
-                  Color(0xFF0E6B57),
-                  Color(0xFF2FD3A5),
-                  Color(0xFFF2B33D)
+                colors: [
+                  AppPalette.ledger.teal,
+                  AppPalette.ledger.mint,
+                  AppPalette.ledger.gold
                 ],
                 selected: state.themeStyle == AppThemeStyle.ledger,
                 onTap: () async {
@@ -322,7 +324,7 @@ class _ThemeChoice extends StatelessWidget {
                           height: 40,
                           decoration: BoxDecoration(
                               color: color,
-                              border: Border.all(color: Colors.black),
+                              border: Border.all(color: context.colors.ink),
                               borderRadius: BorderRadius.circular(6)),
                         ))
                     .toList()),

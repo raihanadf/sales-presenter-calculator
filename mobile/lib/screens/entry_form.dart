@@ -197,12 +197,12 @@ class _EntryFormScreenState extends State<EntryFormScreen> {
           if (_error != null) ...[
             const SizedBox(height: 14),
             Row(children: [
-              const Icon(Icons.error_outline_rounded,
-                  size: 18, color: Colors.redAccent),
+              Icon(Icons.error_outline_rounded,
+                  size: 18, color: context.colors.danger),
               const SizedBox(width: 8),
               Expanded(
                   child: Text(_error!,
-                      style: const TextStyle(color: Colors.redAccent))),
+                      style: TextStyle(color: context.colors.danger))),
             ]),
           ],
           const SizedBox(height: 22),

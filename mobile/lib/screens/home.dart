@@ -317,9 +317,12 @@ class _MyBody extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                      color: context.colors.gold.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(14)),
-                  child: Icon(Icons.star_rounded, color: context.colors.gold)),
+                      color: context.colors.gold,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: context.colors.line,
+                          width: context.colors.outlined ? 1.5 : 0)),
+                  child: Icon(Icons.star_rounded, color: context.colors.ink)),
               const SizedBox(width: 14),
               Expanded(
                   child: Column(
@@ -352,7 +355,7 @@ class _MyBody extends StatelessWidget {
               if (i > 0)
                 Divider(
                     height: 1,
-                    color: context.colors.line,
+                    color: context.colors.rule,
                     indent: 16,
                     endIndent: 16),
               _HistoryRow(entry: data.recent[i]),
@@ -403,13 +406,9 @@ class _HistoryRow extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 13, color: context.colors.muted)),
                     const SizedBox(height: 5),
-                    Text(entry.isPending ? 'Menunggu persetujuan' : 'Disetujui',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: entry.isPending
-                                ? Colors.orange.shade800
-                                : context.colors.teal)),
+                    StatusStamp(
+                        pending: entry.isPending,
+                        label: entry.isPending ? 'Menunggu' : 'Disetujui'),
                   ])),
             ]),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -519,7 +518,7 @@ class _AdminBody extends StatelessWidget {
                   if (i > 0)
                     Divider(
                         height: 1,
-                        color: context.colors.line,
+                        color: context.colors.rule,
                         indent: 18,
                         endIndent: 18),
                   Padding(
@@ -565,7 +564,7 @@ class _AdminBody extends StatelessWidget {
                   if (i > 0)
                     Divider(
                         height: 1,
-                        color: context.colors.line,
+                        color: context.colors.rule,
                         indent: 18,
                         endIndent: 18),
                   Padding(
@@ -742,11 +741,16 @@ class _PodiumTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(18),
+      // first place used to get a 1px gold border that all but vanished on cream, so the winner
+      // read as the least finished card. it now carries a warm fill and the same edge as the rest
       decoration: BoxDecoration(
-          color: context.colors.card,
+          color: rank == 1
+              ? context.colors.gold.withValues(alpha: 0.32)
+              : context.colors.card,
           borderRadius: BorderRadius.circular(kRadius),
           border: Border.all(
-              color: rank == 1 ? context.colors.gold : context.colors.line)),
+              color: context.colors.line,
+              width: context.colors.outlined ? 1.5 : 1)),
       child: AdaptiveSplit(
         leading: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(

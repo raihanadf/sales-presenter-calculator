@@ -444,7 +444,7 @@ class _AddBranchSheetState extends State<_AddBranchSheet> {
                       TextStyle(color: context.colors.muted, fontSize: 12)),
               if (_error != null) ...[
                 const SizedBox(height: 14),
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: TextStyle(color: context.colors.danger)),
               ],
               const SizedBox(height: 22),
               FilledButton(

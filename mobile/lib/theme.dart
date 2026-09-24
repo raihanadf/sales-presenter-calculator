@@ -12,6 +12,15 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color card;
   final Color line;
   final Color muted;
+  // each colour has one job. teal used to be both the hero's fill and the colour of every
+  // spinner, icon and "disetujui" label, which cannot work: a fill wants to be pale, text wants
+  // to be dark. on pocket that left all of that text lavender on white. wash is the fill now
+  final Color wash;
+  final Color pending;
+  final Color danger;
+  // hairline between rows. on pocket `line` is solid ink, right for a card's edge and far too
+  // heavy for a divider inside one
+  final Color rule;
   final bool outlined;
 
   const AppPalette({
@@ -24,19 +33,31 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.card,
     required this.line,
     required this.muted,
+    required this.wash,
+    required this.pending,
+    required this.danger,
+    required this.rule,
     required this.outlined,
   });
 
+  // pocket ledger keeps its identity (pastel, ink outlines, a bit playful) with the pastels now
+  // one family: all three sit at the same oklch lightness and chroma (0.88 / 0.085). the old lime
+  // ran at 44% more chroma than the lavender beside it, which is why it looked neon. every pairing
+  // below was measured against wcag: text is at least 4.5:1 on each surface it lands on
   static const pocket = AppPalette(
-    ink: Color(0xFF111111),
-    teal: Color(0xFFD6BFFF),
-    tealDark: Color(0xFFC8FF9F),
-    mint: Color(0xFFBFF59A),
-    gold: Color(0xFFFFD88A),
-    paper: Color(0xFFF4F3F6),
-    card: Color(0xFFFFFFFF),
-    line: Color(0xFF151515),
-    muted: Color(0xFF68656B),
+    ink: Color(0xFF1F1B16),
+    teal: Color(0xFF27694A),
+    tealDark: Color(0xFF194E35),
+    mint: Color(0xFFB0E8BA),
+    gold: Color(0xFFF3D598),
+    paper: Color(0xFFF5F0E4),
+    card: Color(0xFFFFFCF7),
+    line: Color(0xFF1F1B16),
+    muted: Color(0xFF5F574B),
+    wash: Color(0xFFDCC8FF),
+    pending: Color(0xFF915006),
+    danger: Color(0xFFB6322D),
+    rule: Color(0x2E1F1B16),
     outlined: true,
   );
 
@@ -50,6 +71,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
     card: Color(0xFFFFFFFF),
     line: Color(0xFFDCE5E0),
     muted: Color(0xFF6B7C76),
+    wash: Color(0xFFD8EEE6),
+    pending: Color(0xFF915006),
+    danger: Color(0xFFB6322D),
+    rule: Color(0xFFDCE5E0),
     outlined: false,
   );
 
@@ -64,6 +89,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
       Color? card,
       Color? line,
       Color? muted,
+      Color? wash,
+      Color? pending,
+      Color? danger,
+      Color? rule,
       bool? outlined}) {
     return AppPalette(
       ink: ink ?? this.ink,
@@ -75,6 +104,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
       card: card ?? this.card,
       line: line ?? this.line,
       muted: muted ?? this.muted,
+      wash: wash ?? this.wash,
+      pending: pending ?? this.pending,
+      danger: danger ?? this.danger,
+      rule: rule ?? this.rule,
       outlined: outlined ?? this.outlined,
     );
   }
@@ -96,27 +129,47 @@ EdgeInsets pagePadding(BuildContext context,
         {double top = 12, double bottom = 32}) =>
     EdgeInsets.fromLTRB(context.pageInset, top, context.pageInset, bottom);
 
+// tracking has to scale with size: -0.5 flatters a 42px total and cramps an 11px axis label into
+// a smudge, which is why the small type read as broken. an explicit spacing still wins
+double _tracking(double size) {
+  if (size >= 28) return -1.0;
+  if (size >= 20) return -0.4;
+  if (size >= 15) return 0;
+  return 0.2;
+}
+
 TextStyle display(double size,
         {FontWeight weight = FontWeight.w700,
         Color? color,
-        double spacing = -0.5}) =>
+        double? spacing}) =>
     TextStyle(
         fontFamily: 'SpaceGrotesk',
         fontSize: size,
         fontWeight: weight,
         color: color,
-        letterSpacing: spacing,
+        letterSpacing: spacing ?? _tracking(size),
+        // every rupiah figure is display type, and in a ledger the digits have to line up down a
+        // column, so fix the digit width rather than letting 1 be narrower than 8
+        fontFeatures: const [FontFeature.tabularFigures()],
         height: 1.18);
 
 ThemeData buildTheme(AppThemeStyle style) {
   final colors =
       style == AppThemeStyle.pocket ? AppPalette.pocket : AppPalette.ledger;
   final outline = colors.outlined ? colors.line : const Color(0xFFDCE5E0);
+  final edge = BorderSide(color: colors.line, width: colors.outlined ? 1.5 : 1);
+  // primary used to be the hero's pastel fill, so every material control painting white on
+  // primary (switches, progress, selected chips) sat at 1.65:1 on pocket and all but vanished
   final scheme = ColorScheme.fromSeed(
       seedColor: colors.teal,
       primary: colors.teal,
+      onPrimary: Colors.white,
       secondary: colors.mint,
+      onSecondary: colors.ink,
+      error: colors.danger,
+      onError: Colors.white,
       surface: colors.card,
+      onSurface: colors.ink,
       brightness: Brightness.light);
   return ThemeData(
     colorScheme: scheme,
@@ -130,6 +183,50 @@ ThemeData buildTheme(AppThemeStyle style) {
     ),
     fontFamily: 'Manrope',
     scaffoldBackgroundColor: colors.paper,
+    // a spinner that names no colour now gets the accent instead of material's seed guess
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colors.teal, linearTrackColor: colors.rule),
+    dividerTheme: DividerThemeData(color: colors.rule, thickness: 1),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: colors.ink,
+      contentTextStyle: TextStyle(
+          fontFamily: 'Manrope',
+          color: colors.card,
+          fontSize: 14,
+          fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusSm)),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      elevation: colors.outlined ? 0 : 4,
+      highlightElevation: colors.outlined ? 0 : 6,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadiusSm),
+          side: colors.outlined ? edge : BorderSide.none),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: colors.card,
+      selectedColor: colors.mint,
+      side: colors.outlined ? edge : BorderSide(color: colors.line),
+      labelStyle: TextStyle(
+          fontFamily: 'Manrope', color: colors.ink, fontWeight: FontWeight.w600),
+      checkmarkColor: colors.ink,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: colors.card,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(kRadius)),
+          side: colors.outlined ? edge : BorderSide.none),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: colors.card,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadius),
+          side: colors.outlined ? edge : BorderSide.none),
+    ),
     appBarTheme: AppBarTheme(
       backgroundColor: colors.paper,
       foregroundColor: colors.ink,

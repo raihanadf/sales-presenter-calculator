@@ -165,7 +165,7 @@ class _EntryTile extends StatelessWidget {
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('${entry.entryDate} · ${entry.inputs.closingCount} closing', style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 5),
-                  Text(entry.isPending ? 'Menunggu persetujuan' : 'Disetujui', style: TextStyle(fontSize: 12, color: entry.isPending ? Colors.orange.shade800 : context.colors.teal)),
+                  StatusStamp(pending: entry.isPending, label: entry.isPending ? 'Menunggu' : 'Disetujui'),
                 ])),
               ]),
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
