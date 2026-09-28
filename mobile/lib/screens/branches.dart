@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../ledger_refresh.dart';
 import '../widgets.dart';
 
 // superadmin-only: create branches, close or reopen them, and read their
@@ -27,7 +28,9 @@ class _BranchesScreenState extends State<BranchesScreen> {
 
   Future<void> _reload() async {
     setState(() {
-      _loading = true;
+      // a spinner only when there is nothing to show yet. reloading over a list the admin is
+      // looking at keeps the list, instead of wiping it for a moment
+      _loading = context.read<AppState>().branches.isEmpty;
       _error = null;
     });
     try {
@@ -189,9 +192,13 @@ class _BranchesScreenState extends State<BranchesScreen> {
                     ),
                   ),
                 )
-              : RefreshIndicator(
-                  color: context.colors.teal,
-                  onRefresh: _reload,
+              : LedgerRefresh(
+                  onRefresh: () async {
+                    await _reload();
+                    // _reload keeps its error for the page to show, so the pull has to be told
+                    // it failed rather than stamping "beres" over it
+                    if (_error != null) throw Exception(_error);
+                  },
                   child: ListView.separated(
                     padding: pagePadding(context, top: 12, bottom: 110),
                     itemCount: branches.length,

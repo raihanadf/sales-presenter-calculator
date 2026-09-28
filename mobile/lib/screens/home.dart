@@ -12,6 +12,7 @@ import 'settings_hub.dart';
 import 'import_export.dart';
 import '../util/format.dart';
 import '../anim.dart';
+import '../ledger_refresh.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -120,14 +121,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _SyncBanner(),
                     ),
                     Expanded(
-                      child: RefreshIndicator(
-                        color: context.colors.teal,
+                      child: LedgerRefresh(
                         onRefresh: _refresh,
                         child: FutureBuilder<Object>(
                           future: _future,
                           builder: (context, snap) {
-                            if (snap.connectionState ==
-                                ConnectionState.waiting) {
+                            // only the very first load gets a spinner. on a refresh the
+                            // old figures stay put and the pull's own slip shows progress,
+                            // instead of the whole page blanking out to a spinner
+                            if (snap.connectionState == ConnectionState.waiting &&
+                                !snap.hasData) {
                               return Center(
                                 child: CircularProgressIndicator(
                                   color: context.colors.teal,
