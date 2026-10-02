@@ -46,6 +46,8 @@ dashboardRoutes.get("/", async (c) => {
       branchName: branches.name,
       total: sql<number>`coalesce(sum(${salesEntries.takeHome}), 0)`,
       entries: sql<number>`count(${salesEntries.id})`,
+      omzet: sql<number>`coalesce(sum(${salesEntries.closingTotal}), 0)`,
+      closings: sql<number>`coalesce(sum(${salesEntries.closingCount}), 0)`,
     })
     .from(salesEntries)
     .innerJoin(users, eq(users.id, salesEntries.presenterId))
@@ -72,6 +74,9 @@ dashboardRoutes.get("/", async (c) => {
       : [];
 
   const monthTotal = perPresenter.reduce((sum, r) => sum + r.total, 0);
+  // gross sales (closing count × closing price) before bop, souvenir and harian.
+  const monthOmzet = perPresenter.reduce((sum, r) => sum + r.omzet, 0);
+  const monthClosings = perPresenter.reduce((sum, r) => sum + r.closings, 0);
   const pending = await d
     .select({ entry: salesEntries, presenterName: users.name, branchName: branches.name })
     .from(salesEntries)
@@ -86,6 +91,8 @@ dashboardRoutes.get("/", async (c) => {
     branchId: scope,
     todayIncome: todayRows[0].total,
     monthIncome: monthTotal,
+    monthOmzet,
+    monthClosings,
     top3: perPresenter.slice(0, 3),
     monthRecap: perPresenter,
     perBranch,

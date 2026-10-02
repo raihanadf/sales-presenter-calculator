@@ -335,7 +335,7 @@ class _ExportSheetState extends State<_ExportSheet> {
           children: [
             Text('Export Rekap', style: display(22)),
             const SizedBox(height: 4),
-            Text('Rekap bulanan take-home per presenter dalam PDF.',
+            Text('Rekap bulanan take-home per presenter dan total omzet dalam PDF.',
                 style: TextStyle(color: colors.muted)),
             const SizedBox(height: 20),
             Panel(

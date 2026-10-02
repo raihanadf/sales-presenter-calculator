@@ -276,6 +276,8 @@ class Dashboard {
   final List<BranchRecapRow> perBranch;
   final int todayIncome;
   final int monthIncome;
+  final int monthOmzet;
+  final int monthClosings;
   final List<RecapRow> top3;
   final List<RecapRow> monthRecap;
   final List<SalesEntry> pending;
@@ -287,6 +289,8 @@ class Dashboard {
     required this.perBranch,
     required this.todayIncome,
     required this.monthIncome,
+    required this.monthOmzet,
+    required this.monthClosings,
     required this.top3,
     required this.monthRecap,
     required this.pending,
@@ -301,6 +305,8 @@ class Dashboard {
             .toList(),
         todayIncome: j['todayIncome'],
         monthIncome: j['monthIncome'],
+        monthOmzet: j['monthOmzet'],
+        monthClosings: j['monthClosings'],
         top3: (j['top3'] as List).map((e) => RecapRow.fromJson(e)).toList(),
         monthRecap: (j['monthRecap'] as List).map((e) => RecapRow.fromJson(e)).toList(),
         pending: (j['pending'] as List).map((e) => SalesEntry.fromJson(e)).toList(),

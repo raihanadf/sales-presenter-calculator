@@ -84,8 +84,8 @@ Future<Uint8List> buildRecapPdf(String month, List<SalesEntry> entries) async {
       );
 
   // one branch's ledger table plus its per-presenter totals. returns the
-  // widgets and the branch subtotal so the caller can add them up.
-  (List<pw.Widget>, int) branchSection(String? branchName, List<SalesEntry> rows) {
+  // widgets, the take-home subtotal and the omzet so the caller can add them up.
+  (List<pw.Widget>, int, int) branchSection(String? branchName, List<SalesEntry> rows) {
     final presenters = <int, String>{};
     for (final e in rows) {
       presenters[e.presenterId] = e.presenterName ?? 'Presenter ${e.presenterId}';
@@ -104,6 +104,9 @@ Future<Uint8List> buildRecapPdf(String month, List<SalesEntry> entries) async {
           perPresenter[e.presenterId]! + e.computed.takeHome;
     }
     final subtotal = perPresenter.values.fold<int>(0, (a, b) => a + b);
+    // omzet = gross closing sales, before bop, souvenir and harian.
+    final omzet = rows.fold<int>(0, (a, e) => a + e.computed.closingTotal);
+    final closings = rows.fold<int>(0, (a, e) => a + e.inputs.closingCount);
 
     final tableHeader = pw.TableRow(
       decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFEDEDED)),
@@ -171,21 +174,35 @@ Future<Uint8List> buildRecapPdf(String month, List<SalesEntry> entries) async {
                 cell('Rp ${_grouped(subtotal)}', bold: true),
               ],
             ),
+            pw.TableRow(
+              decoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFFEDEDED)),
+              children: [
+                cell(
+                    '${branchName == null ? 'Total omzet' : 'Omzet $branchName'} ($closings closing)',
+                    align: pw.Alignment.centerLeft,
+                    bold: true),
+                cell('Rp ${_grouped(omzet)}', bold: true),
+              ],
+            ),
           ],
         ),
       ],
-      subtotal
+      subtotal,
+      omzet
     );
   }
 
   final sections = <pw.Widget>[];
   var grand = 0;
+  var grandOmzet = 0;
   for (final name in branchNames) {
-    final (widgets, subtotal) =
+    final (widgets, subtotal, omzet) =
         branchSection(multiBranch ? name : null, byBranch[name]!);
     sections.addAll(widgets);
     sections.add(pw.SizedBox(height: 22));
     grand += subtotal;
+    grandOmzet += omzet;
   }
 
   doc.addPage(pw.MultiPage(
@@ -224,6 +241,15 @@ Future<Uint8List> buildRecapPdf(String month, List<SalesEntry> entries) async {
                 cell('Total semua cabang',
                     align: pw.Alignment.centerLeft, bold: true),
                 cell('Rp ${_grouped(grand)}', bold: true),
+              ],
+            ),
+            pw.TableRow(
+              decoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFFEDEDED)),
+              children: [
+                cell('Omzet semua cabang',
+                    align: pw.Alignment.centerLeft, bold: true),
+                cell('Rp ${_grouped(grandOmzet)}', bold: true),
               ],
             ),
           ],
