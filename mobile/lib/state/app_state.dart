@@ -18,7 +18,11 @@ class AppState extends ChangeNotifier {
   List<Branch> branches = [];
   AppThemeStyle themeStyle = AppThemeStyle.pocket;
 
-  bool get isLoggedIn => user != null;
+  // true while the signed-in screens are being drawn back into the printer band. user stays
+  // set until they are gone, because they still build from it on their way out
+  bool signingOut = false;
+
+  bool get isLoggedIn => user != null && !signingOut;
 
   // null means "all branches at once", which only the superadmin can be in.
   int? get selectedBranchId => api.activeBranchId;
@@ -160,6 +164,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> login(String username, String password) async {
     user = await api.login(username, password);
+    signingOut = false;
     notifyListeners();
     if (user!.isSuperadmin) await loadBranches();
     syncPending();
@@ -167,7 +172,14 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     await api.logout();
+    signingOut = true;
+    notifyListeners();
+    // a little past the gate's own animation, so the leaving screens are out of the tree
+    await Future.delayed(kGateDuration + const Duration(milliseconds: 150));
+    // signed straight back in while the gate was still animating: that session stands
+    if (!signingOut) return;
     user = null;
+    signingOut = false;
     branches = [];
     api.activeBranchId = null;
     notifyListeners();

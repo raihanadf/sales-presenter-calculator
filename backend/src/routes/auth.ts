@@ -17,7 +17,7 @@ authRoutes.post("/login", async (c) => {
     where: eq(users.username, parsed.data.username),
   });
   if (!row || !(await verifyPassword(parsed.data.password, row.passwordHash))) {
-    return c.json({ error: "invalid credentials" }, 401);
+    return c.json({ error: "Username atau password salah." }, 401);
   }
 
   const branch = row.branchId

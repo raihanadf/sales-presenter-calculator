@@ -290,6 +290,67 @@ class Panel extends StatelessWidget {
       decoration: panelDecoration(context), padding: padding, child: child);
 }
 
+// a secondary action that belongs to the panels around it. on pocket it rests on the same ink
+// shadow and sinks into it while pressed, like a key going down; ledger keeps a flat card
+class LiftButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  const LiftButton(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.onPressed});
+
+  @override
+  State<LiftButton> createState() => _LiftButtonState();
+}
+
+class _LiftButtonState extends State<LiftButton> {
+  static const _lift = Offset(2, 3);
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final sink = colors.outlined && _down;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _down = true),
+        onTapUp: (_) => setState(() => _down = false),
+        onTapCancel: () => setState(() => _down = false),
+        onTap: widget.onPressed,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(
+              sink ? _lift.dx : 0, sink ? _lift.dy : 0, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          decoration: panelDecoration(context,
+              color: !colors.outlined && _down ? colors.wash : null,
+              radius: kRadiusSm,
+              lift: sink ? Offset.zero : _lift),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(widget.icon,
+                size: 20, color: colors.outlined ? colors.ink : colors.tealDark),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(widget.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: display(15.5,
+                      weight: FontWeight.w600,
+                      color: colors.outlined ? colors.ink : colors.tealDark,
+                      spacing: 0)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class DashedLine extends StatelessWidget {
   final Color? color;
   const DashedLine({super.key, this.color});

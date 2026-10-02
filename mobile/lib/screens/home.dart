@@ -478,7 +478,7 @@ class _AdminBody extends StatelessWidget {
           delayMs: 140,
           child: Row(children: [
             Expanded(
-              child: OutlinedButton.icon(
+              child: LiftButton(
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   final ok = await showImportSheet(context);
@@ -490,16 +490,16 @@ class _AdminBody extends StatelessWidget {
                     await onChanged();
                   }
                 },
-                icon: const Icon(Icons.file_upload_outlined),
-                label: const Text('Import'),
+                icon: Icons.file_upload_outlined,
+                label: 'Import',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: OutlinedButton.icon(
+              child: LiftButton(
                 onPressed: () => showExportSheet(context),
-                icon: const Icon(Icons.file_download_outlined),
-                label: const Text('Export'),
+                icon: Icons.file_download_outlined,
+                label: 'Export',
               ),
             ),
           ]),
@@ -563,6 +563,27 @@ class _AdminBody extends StatelessWidget {
           Panel(
               padding: EdgeInsets.zero,
               child: Column(children: [
+                // gross sales for the month, before bop, souvenir and harian.
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  child: AdaptiveSplit(
+                    leading: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Total omzet',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: context.colors.ink)),
+                          const SizedBox(height: 4),
+                          Text('${data.monthClosings} closing',
+                              style: TextStyle(
+                                  color: context.colors.muted, fontSize: 13)),
+                        ]),
+                    trailing: Rupiah(data.monthOmzet, size: 16),
+                  ),
+                ),
+                Divider(height: 1, color: context.colors.rule),
                 for (var i = 0; i < data.monthRecap.length; i++) ...[
                   if (i > 0)
                     Divider(

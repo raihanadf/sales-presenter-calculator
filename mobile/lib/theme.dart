@@ -124,6 +124,11 @@ extension AppPaletteContext on BuildContext {
 
 const kRadius = 24.0;
 const kRadiusSm = 16.0;
+// height of the printer band below the status bar, while signed out. the sign-in slip hangs
+// from its bottom edge
+const kPrinterBand = 22.0;
+// how long the gate takes to swap sign-in and the signed-in screens through that band
+const kGateDuration = Duration(milliseconds: 1150);
 
 EdgeInsets pagePadding(BuildContext context,
         {double top = 12, double bottom = 32}) =>
@@ -265,6 +270,9 @@ ThemeData buildTheme(AppThemeStyle style) {
       style: FilledButton.styleFrom(
         backgroundColor: colors.outlined ? colors.ink : colors.teal,
         foregroundColor: colors.outlined ? Colors.white : Colors.white,
+        // material's grey blob read as broken rather than "not yet"
+        disabledBackgroundColor: colors.ink.withValues(alpha: 0.10),
+        disabledForegroundColor: colors.muted,
         minimumSize: const Size(64, 56),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
         shape: RoundedRectangleBorder(
@@ -276,12 +284,46 @@ ThemeData buildTheme(AppThemeStyle style) {
             letterSpacing: 0.2),
       ),
     ),
+    // material's default here was a hairline grey edge with seed-green text, which looked like a
+    // different app next to the inked panels. it now uses the same ink, card and type as they do
     outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(64, 56),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      style: ButtonStyle(
+        minimumSize: const WidgetStatePropertyAll(Size(64, 56)),
+        padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kRadiusSm))),
+        backgroundColor: WidgetStatePropertyAll(colors.card),
+        foregroundColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.disabled)
+                ? colors.muted.withValues(alpha: 0.55)
+                : colors.outlined
+                    ? colors.ink
+                    : colors.tealDark),
+        overlayColor:
+            WidgetStatePropertyAll(colors.ink.withValues(alpha: 0.06)),
+        side: WidgetStateProperty.resolveWith((states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
+                ? colors.rule
+                : colors.line,
+            width: colors.outlined ? 1.5 : 1)),
+        iconSize: const WidgetStatePropertyAll(20),
+        textStyle: const WidgetStatePropertyAll(TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 15.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1)),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: colors.outlined ? colors.ink : colors.tealDark,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kRadiusSm)),
+        textStyle: const TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 15,
+            fontWeight: FontWeight.w700),
       ),
     ),
   );
